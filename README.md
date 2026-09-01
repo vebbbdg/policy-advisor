@@ -1,76 +1,46 @@
-# GenAI Chatbot | Full-Stack LLM Application with RAG
+# Policy Advisor | 留学生 CPT/OPT 签证政策助手
 
 [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com)
 [![LangChain](https://img.shields.io/badge/LangChain-0.2+-orange.svg)](https://langchain.com)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A production-grade **Retrieval-Augmented Generation (RAG)** chatbot built with FastAPI, LangChain, and DeepSeek LLM. Features real-time streaming responses, multi-session management, document upload (PDF/TXT/DOCX), and a modern ChatGPT-style web UI.
+An AI advisor specialized in **US student visa work authorization (CPT / OPT / STEM OPT)**, built by productizing my general-purpose RAG platform into a vertical-domain product. It answers Chinese-speaking international students' policy questions grounded in **official sources only** (USCIS / ICE / university ISSO pages), with every answer carrying **source citations and policy freshness dates**, and a hard compliance boundary: out-of-corpus questions are refused, and every reply includes a "not legal advice" disclaimer.
+
+> **Origin story**: This product's RAG foundation (FastAPI + SSE streaming, hybrid retrieval + reranking, evaluation framework) comes from my general-purpose chatbot project `chat_robot` (MIT). Instead of starting over, I'm evolving my own system into a product — the full roadmap lives in [docs/PRODUCTIZATION_PLAN.md](docs/PRODUCTIZATION_PLAN.md).
+<!-- TODO: 待用户在 GitHub 建立 chat_robot 远程仓库后，将 `chat_robot` 替换为实际仓库链接 -->
 
 ---
 
-## ✨ Key Features
+## 🎯 Why a Vertical Product
 
-### 🤖 Core LLM Capabilities
-- **Streaming Responses (SSE)** — Real-time token-by-token output, ChatGPT-like typing effect
-- **Context Window Management** — Sliding window algorithm to prevent token overflow and optimize costs
+Three problems a generic RAG chatbot cannot solve for immigration policy:
+
+1. **Cross-language retrieval** — The corpus is English official documentation; users ask in Chinese. The English-only embedding model must be replaced with a multilingual one (Phase 2).
+2. **Policy freshness** — Immigration rules change frequently. Every retrieved chunk carries `source_url` + `crawl_date` metadata, and answers surface "information as of {date}, refer to USCIS for the latest".
+3. **Compliance red line** — Answers must never pretend to be legal advice; out-of-domain questions are refused and redirected.
+
+---
+
+## ✨ Current Capabilities (inherited baseline)
+
+- **Streaming Responses (SSE)** — Token-by-token output, ChatGPT-like typing effect
 - **Multi-Session Support** — Isolated conversation threads with auto-generated titles
-- **System Prompt Engineering** — Configurable AI persona and behavior
+- **Document Upload** — PDF / TXT / DOCX with security validation
+- **Three-arm Retrieval** — dense vector, BM25+RRF hybrid, and hybrid + cross-encoder rerank; A/B measurable via the evaluation suite
+- **Local Embeddings** — sentence-transformers, runs offline with no API cost
+- **Docker Deployment** — One-command startup with Docker Compose
 
-### 📚 RAG (Retrieval-Augmented Generation)
-- **Document Upload** — Support for PDF, TXT, and DOCX files
-- **Intelligent Chunking** — Recursive character text splitting with overlap for context preservation
-- **Vector Search** — ChromaDB vector store with semantic similarity retrieval
-- **Hybrid Retrieval** — BM25 + dense vector search fused with Reciprocal Rank Fusion (RRF), A/B measurable via the evaluation suite
-- **Cross-Encoder Reranking** — Two-stage retrieval: hybrid candidates reranked by ms-marco-MiniLM cross-encoder
-- **Local Embeddings** — all-MiniLM-L6-v2 via sentence-transformers (runs offline, no API cost)
-- **Toggle RAG Mode** — Switch between pure LLM and RAG-enhanced responses
+## 🚧 Roadmap Status
 
-### 🎨 Modern Web UI
-- ChatGPT-inspired clean interface with sidebar navigation
-- Markdown rendering with syntax-highlighted code blocks
-- Responsive design for desktop and mobile
-- Suggestion cards for quick start
-- Document upload with RAG status indicator
-
-### 🏗️ Engineering & Production
-- **Layered Architecture** — Decoupled model, memory, session, and RAG modules
-- **Structured Logging** — Dual output to console and rotating log files
-- **CORS Support** — Ready for frontend-backend separation deployment
-- **Environment Configuration** — Secure API key management via `.env`
-- **Docker Support** — One-command deployment with Docker Compose
-- **Health Check Endpoint** — Monitoring-ready `/api/health`
-
----
-
-## 🏛️ Architecture
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                    Frontend (HTML/CSS/JS)               │
-│  ┌──────────┐  ┌──────────────┐  ┌──────────────────┐   │
-│  │ Sidebar  │  │  Chat Area   │  │  Document Upload │   │
-│  │ Sessions │  │  Markdown    │  │  RAG Toggle      │   │
-│  └──────────┘  └──────────────┘  └──────────────────┘   │
-└─────────────────────────┬───────────────────────────────┘
-                          │ SSE Streaming (fetch + ReadableStream)
-┌─────────────────────────▼───────────────────────────────┐
-│                   FastAPI Backend                        │
-│  ┌────────────┐  ┌─────────────┐  ┌──────────────────┐  │
-│  │ /api/chat  │  │ /api/sessions│ │ /api/documents   │  │
-│  │  -stream   │  │ CRUD ops    │  │ Upload / Stats   │  │
-│  └─────┬──────┘  └─────────────┘  └────────┬─────────┘  │
-│        │                                    │            │
-│  ┌─────▼──────────────────────────────────▼─────────┐   │
-│  │              Core Business Logic                  │   │
-│  │  ┌────────┐ ┌─────────┐ ┌───────┐ ┌──────────┐  │   │
-│  │  │ Model  │ │ Memory  │ │Session│ │   RAG    │  │   │
-│  │  │  LLM   │ │ Sliding │ │  Mgr  │ │ ChromaDB │  │   │
-│  │  │Embed.  │ │ Window  │ │       │ │ Chunking │  │   │
-│  │  └────────┘ └─────────┘ └───────┘ └──────────┘  │   │
-│  └──────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────┘
-```
+| Phase | Scope | Status |
+|---|---|---|
+| 0 | Project initialization (new repo, baseline commit) | ✅ Done |
+| 1 | Policy corpus pipeline (crawler + metadata ingestion) | 🔄 In progress |
+| 2 | Vertical RAG: multilingual embeddings, citations, refusal, policy eval set | ⏳ Planned |
+| 3 | Productization: SQLite persistence, auth, rate limiting | ⏳ Planned |
+| 4 | Deployment: Render + CI/CD + monitoring | ⏳ Planned |
+| 5 | Compliance & operations (ongoing) | ⏳ Planned |
 
 ---
 
@@ -80,42 +50,24 @@ A production-grade **Retrieval-Augmented Generation (RAG)** chatbot built with F
 - Python 3.10+
 - A DeepSeek API key (get one at [platform.deepseek.com](https://platform.deepseek.com))
 
-### Local Development
-
 ```bash
-# 1. Clone the repository
 git clone <repo-url>
-cd chat_robot
+cd policy-advisor
 
-# 2. Create and activate virtual environment
 conda create -n langchain1.2 python=3.11
 conda activate langchain1.2
-
-# 3. Install dependencies
 pip install -r requirements.txt
 
-# 4. Configure environment
-cp .env.example .env
-# Edit .env and add your DEEPSEEK_API_KEY
+cp .env.example .env   # add your DEEPSEEK_API_KEY
 
-# 5. Run the server
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
-
-# 6. Open in browser
-# http://localhost:8000
+# open http://localhost:8000
 ```
 
-### Docker Deployment
+Or with Docker:
 
 ```bash
-# Build and run with Docker Compose
 docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop
-docker-compose down
 ```
 
 ---
@@ -123,141 +75,52 @@ docker-compose down
 ## 📁 Project Structure
 
 ```
-chat_robot/
+policy-advisor/
 ├── main.py                 # FastAPI application entry point
-├── requirements.txt        # Python dependencies
-├── .env.example           # Environment variables template
-├── Dockerfile             # Docker image definition
-├── docker-compose.yml     # Docker Compose configuration
 ├── core/
-│   ├── __init__.py
-│   ├── model.py          # LLM, embedding and reranker initialization
-│   ├── memory.py         # Sliding window context management
-│   ├── session.py        # Multi-session management
-│   ├── rag.py            # RAG engine with ChromaDB
-│   ├── retrieval.py      # Tokenization / RRF fusion / rerank sorting (pure functions)
-│   ├── uploads.py        # Upload security validation
-│   └── logger.py         # Structured logging
-├── static/
-│   └── index.html        # Single-page web application
-├── data/
-│   ├── vectordb/         # ChromaDB persistent storage
-│   └── uploads/          # Uploaded documents
-├── logs/                 # Application logs
-├── eval/                 # RAG evaluation framework
-│   ├── corpus/           #   Evaluation documents (isolated from production KB)
-│   ├── dataset.json      #   QA dataset with ground-truth passages
-│   ├── metrics.py        #   Recall@k / MRR / Precision@k
-│   ├── judge.py          #   LLM-as-judge scoring
-│   └── run_eval.py       #   CLI evaluation runner
-└── tests/                # Unit tests
+│   ├── model.py            # LLM, embedding and reranker initialization
+│   ├── memory.py           # Sliding window context management
+│   ├── session.py          # Multi-session management
+│   ├── rag.py              # RAG engine with ChromaDB
+│   ├── retrieval.py        # Tokenization / RRF fusion / rerank (pure functions)
+│   ├── uploads.py          # Upload security validation
+│   └── logger.py           # Structured logging
+├── crawler/                # [Phase 1] Official policy page crawler → Markdown + metadata
+├── data/policy_corpus/     # [Phase 1] Versioned corpus snapshots (git-tracked)
+├── static/index.html       # Single-page web application
+├── eval/                   # RAG evaluation framework (Recall@k / MRR / LLM-as-judge)
+├── tests/                  # Unit tests
+└── docs/PRODUCTIZATION_PLAN.md  # Full productization roadmap
 ```
 
 ---
 
-## 🔌 API Reference
+## 🧪 Evaluation
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/` | Web UI |
-| `GET` | `/api/health` | Health check |
-| `POST` | `/api/chat-stream` | Streaming chat (SSE) |
-| `POST` | `/api/sessions` | Create new session |
-| `GET` | `/api/sessions` | List all sessions |
-| `DELETE` | `/api/sessions/{id}` | Delete session |
-| `POST` | `/api/sessions/{id}/reset` | Reset session |
-| `POST` | `/api/documents/upload` | Upload document |
-| `GET` | `/api/documents/stats` | Knowledge base stats |
-| `DELETE` | `/api/documents` | Clear knowledge base |
-
-### Example: Streaming Chat
-```bash
-curl -X POST http://localhost:8000/api/chat-stream \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Hello!", "use_rag": false}'
-```
-
----
-
-## 🛠️ Tech Stack
-
-| Layer | Technologies |
-|-------|-------------|
-| **Frontend** | Vanilla JS, Marked.js, Highlight.js, CSS3 |
-| **Backend** | FastAPI, Uvicorn, Pydantic v2 |
-| **LLM** | LangChain, DeepSeek Chat API |
-| **RAG** | ChromaDB, sentence-transformers Embeddings, PyPDF, python-docx |
-| **Infra** | Docker, Python logging, CORS middleware |
-
----
-
-## 🧪 Testing
-
-```bash
-# Run all tests
-python -m pytest tests/ -v
-
-# Run with coverage
-python -m pytest tests/ -v --cov=core --cov=main
-```
-
----
-
-## 📊 RAG Evaluation
-
-The project ships a self-contained evaluation framework (`eval/`) that measures retrieval and generation quality **separately**, using an isolated vector store (never touches the production knowledge base).
-
-- **Corpus** — 7 multi-paragraph documents in `eval/corpus/`, including topically adjacent *distractor* documents that share vocabulary with the queries, forcing real chunk-level discrimination
-- **Dataset** — 20 entries in `eval/dataset.json`: 17 answerable QA pairs (paraphrased question + ground-truth passage + reference answer) plus 3 *unanswerable probes* that test hallucination resistance
-- **Retrieval metrics** — Recall@k, MRR, Precision@k
-- **Generation quality** — LLM-as-judge scoring (1–5) against the reference answer, plus a refusal rubric for unanswerable probes
+The project ships a self-contained evaluation framework (`eval/`) measuring retrieval and generation quality separately, on an isolated vector store. Improvements are accepted or rejected by data, not intuition — this methodology will gate every Phase 2 change (e.g., the multilingual embedding model switch).
 
 ```bash
 # Retrieval metrics only (no API cost)
 python -m eval.run_eval
 
-# A/B comparison: dense vector vs BM25+vector hybrid (RRF fusion) vs hybrid + cross-encoder rerank
-python -m eval.run_eval --retriever dense
-python -m eval.run_eval --retriever hybrid
-python -m eval.run_eval --retriever rerank
-
-# Custom top-k
-python -m eval.run_eval --top-k 5
+# A/B: dense vs hybrid (BM25+RRF) vs hybrid + cross-encoder rerank
+python -m eval.run_eval --retriever dense|hybrid|rerank
 
 # Retrieval + generation + LLM-as-judge (needs DEEPSEEK_API_KEY)
 python -m eval.run_eval --judge
 ```
 
-Results are printed as a summary table and saved to `eval/results/` as JSON, so improvements (better chunking, hybrid search, reranking…) can be compared quantitatively.
-
-### Measured results (17 answerable + 3 probes, top_k=3, all-MiniLM-L6-v2)
-
-| Retriever | Recall@3 | MRR | Notes |
-|---|---|---|---|
-| dense (vector only) | 1.000 | 0.971 | Baseline. One query mis-ranked: paraphrased question vs. source wording (`retriever` vs `retrieval`) |
-| hybrid (BM25 + RRF) | 1.000 | 0.971 | **Negative result, kept on record.** BM25 is exact-token matching, so the morphological mismatch scores zero; the RRF tie falls back to the dense ordering |
-| rerank (hybrid + cross-encoder) | 1.000 | **1.000** | Two-stage retrieval: hybrid recall of 20 candidates, then `ms-marco-MiniLM-L-6-v2` re-scores (query, passage) pairs and fixes the mis-ranked case |
-
-> The takeaway is methodological: improvements are accepted or rejected by the eval suite, not by intuition — the hybrid experiment was falsified by data, and the reranker earned its place by closing the only ranking gap.
-
 ---
 
-## 🔮 Future Enhancements
+## ⚖️ Disclaimer
 
-- [ ] User authentication (JWT/OAuth)
-- [ ] PostgreSQL/SQLite for persistent session storage
-- [ ] Redis for caching and session management
-- [ ] Multi-model support (OpenAI, Claude, local models)
-- [ ] Streaming RAG with source citations
-- [ ] WebSocket support for real-time features
-- [ ] Rate limiting and API key management
-- [ ] Deployment to AWS/GCP with CI/CD pipeline
+All content produced by this assistant is for informational purposes only and **does not constitute legal advice**. For major decisions, consult your school's DSO (Designated School Official) or a qualified immigration attorney. Always refer to [USCIS](https://www.uscis.gov) for the latest policies.
 
 ---
 
 ## 📝 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+MIT — inherited from the baseline project.
 
 ---
 
@@ -266,5 +129,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 Built as a portfolio project for AI Software Engineer applications.
 
 **Tech Stack Keywords for Resume:**
-`Python` `FastAPI` `LangChain` `RAG` `LLM` `ChromaDB` `Vector Search` `SSE Streaming`
-`Full-Stack` `Docker` `REST API` `Pydantic` `Async` `Generative AI` `NLP`
+`Python` `FastAPI` `LangChain` `RAG` `LLM` `ChromaDB` `Multilingual Retrieval` `SSE Streaming` `Docker` `Policy Domain QA`
