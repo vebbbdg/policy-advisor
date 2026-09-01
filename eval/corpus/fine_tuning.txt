@@ -1,0 +1,14 @@
+Fine-tuning adapts a pretrained language model to a narrow task by training it on labeled examples.
+It changes the model weights themselves, so the new behavior ships with every future request.
+LoRA reduces fine-tuning cost by training small adapter matrices instead of all model weights.
+Adapters can be swapped at serving time, letting one base model host many specialized variants.
+
+Retrieval-augmented generation is often cheaper than fine-tuning when the goal is adding new factual knowledge.
+Documents can be updated instantly in a vector store, while fine-tuning requires a full training run.
+Fine-tuning can still cause catastrophic forgetting of abilities the base model used to have.
+Teams often combine both, fine-tuning for tone and format while retrieving for facts.
+
+Evaluation data must be held out from training data to get an honest estimate of quality.
+Leaking evaluation examples into training produces inflated scores that collapse in production.
+Regression suites should rerun after every training job so degradations are caught early.
+Embedding models can also be fine-tuned on domain pairs to sharpen retrieval relevance.

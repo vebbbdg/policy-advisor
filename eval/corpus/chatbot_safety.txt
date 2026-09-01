@@ -1,0 +1,14 @@
+Prompt injection is an attack where malicious user input overrides the instructions given to a language model.
+Attackers hide instructions inside documents, web pages, or pasted text that the assistant later processes.
+Guardrails such as input filtering and output validation reduce the risk of harmful generations.
+Layered defenses work best because no single filter catches every variant of an attack.
+
+System prompts should never reveal secret credentials or internal configuration to users.
+Sensitive logic belongs in backend code, not in text the model can be persuaded to repeat.
+Red teaming a chatbot means probing it with adversarial questions before it is released.
+Findings from red team exercises should feed back into the guardrail rules and evaluation suite.
+
+Rate limiting protects language model APIs from abuse and uncontrolled cost.
+Audit logging of prompts and responses makes incidents traceable after the fact.
+Hallucination is a reliability problem, while injection is a security problem, and they need different controls.
+Retrieval grounding helps with factuality but does not, by itself, stop injected instructions.

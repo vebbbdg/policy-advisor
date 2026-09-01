@@ -1,0 +1,139 @@
+[
+  {
+    "id": "vecdb-01",
+    "question": "How are vector databases different from relational databases?",
+    "snippet": "Unlike relational databases that match exact values, vector databases measure similarity between vectors.",
+    "source": "vector_databases.txt",
+    "reference_answer": "Relational databases match exact values, while vector databases measure similarity between vectors."
+  },
+  {
+    "id": "vecdb-02",
+    "question": "Which similarity metrics are most commonly used in vector search?",
+    "snippet": "The most common similarity metrics are cosine similarity and Euclidean distance.",
+    "source": "vector_databases.txt",
+    "reference_answer": "Cosine similarity and Euclidean distance are the most common similarity metrics."
+  },
+  {
+    "id": "vecdb-03",
+    "question": "What is Chroma typically used for?",
+    "snippet": "Chroma is an open-source vector database that is popular for prototyping RAG applications.",
+    "source": "vector_databases.txt",
+    "reference_answer": "Chroma is an open-source vector database popular for prototyping RAG applications."
+  },
+  {
+    "id": "vecdb-04",
+    "question": "What trade-off do approximate nearest neighbor algorithms like HNSW make?",
+    "snippet": "Approximate nearest neighbor algorithms such as HNSW trade a small amount of recall for much faster search.",
+    "source": "vector_databases.txt",
+    "reference_answer": "HNSW-style approximate nearest neighbor algorithms trade a small amount of recall for much faster search."
+  },
+  {
+    "id": "vecdb-05",
+    "question": "How does metadata filtering affect a similarity search?",
+    "snippet": "Metadata filtering lets you restrict similarity search to a subset of the collection.",
+    "source": "vector_databases.txt",
+    "reference_answer": "Metadata filtering restricts similarity search to a subset of the collection."
+  },
+  {
+    "id": "rag-01",
+    "question": "What are the main stages of a RAG pipeline?",
+    "snippet": "The pipeline has four main stages: chunking, embedding, retrieval, and generation.",
+    "source": "rag_pipeline.txt",
+    "reference_answer": "A RAG pipeline has four main stages: chunking, embedding, retrieval, and generation."
+  },
+  {
+    "id": "rag-02",
+    "question": "Why is chunk overlap used when splitting documents?",
+    "snippet": "Overlapping chunks help preserve context that would otherwise be lost at split boundaries.",
+    "source": "rag_pipeline.txt",
+    "reference_answer": "Chunk overlap preserves context that would otherwise be lost at split boundaries."
+  },
+  {
+    "id": "rag-03",
+    "question": "How does RAG help reduce hallucination?",
+    "snippet": "RAG reduces hallucination because the model can quote evidence instead of relying on memory alone.",
+    "source": "rag_pipeline.txt",
+    "reference_answer": "RAG reduces hallucination because the model can quote evidence from documents instead of relying on memory alone."
+  },
+  {
+    "id": "rag-04",
+    "question": "What happens when the retriever returns irrelevant passages?",
+    "snippet": "If retrieval returns irrelevant passages, the language model may still produce a wrong answer.",
+    "source": "rag_pipeline.txt",
+    "reference_answer": "If retrieval returns irrelevant passages, the language model may still produce a wrong answer."
+  },
+  {
+    "id": "emb-01",
+    "question": "What does an embedding model do with text?",
+    "snippet": "An embedding model converts text into a fixed-size vector of numbers that captures semantic meaning.",
+    "source": "embedding_models.txt",
+    "reference_answer": "An embedding model converts text into a fixed-size numeric vector that captures semantic meaning."
+  },
+  {
+    "id": "emb-02",
+    "question": "How many dimensions do all-MiniLM-L6-v2 embeddings have?",
+    "snippet": "The all-MiniLM-L6-v2 model produces embeddings with 384 dimensions and runs efficiently on CPU.",
+    "source": "embedding_models.txt",
+    "reference_answer": "all-MiniLM-L6-v2 produces 384-dimensional embeddings."
+  },
+  {
+    "id": "emb-03",
+    "question": "Why should documents and queries be embedded with the same model?",
+    "snippet": "Retrieval systems should use the same embedding model for documents and for queries.",
+    "source": "embedding_models.txt",
+    "reference_answer": "Retrieval systems should use the same embedding model for documents and queries so both live in one comparable vector space."
+  },
+  {
+    "id": "tsdb-01",
+    "question": "What kind of data are time-series databases built to store?",
+    "snippet": "Time-series databases are optimized for storing timestamped measurements such as sensor readings and metrics.",
+    "source": "time_series_databases.txt",
+    "reference_answer": "Time-series databases are optimized for timestamped measurements like sensor readings and metrics."
+  },
+  {
+    "id": "tsdb-02",
+    "question": "How do time-series databases keep storage costs low for historical data?",
+    "snippet": "Unlike general-purpose databases, time-series databases compress old data aggressively to save storage.",
+    "source": "time_series_databases.txt",
+    "reference_answer": "They compress old data aggressively to save storage."
+  },
+  {
+    "id": "img-01",
+    "question": "What makes CLIP useful for connecting images with text?",
+    "snippet": "CLIP produces embeddings where images and their text captions are close together in the same vector space.",
+    "source": "image_embeddings.txt",
+    "reference_answer": "CLIP embeds images and their text captions close together in one shared vector space."
+  },
+  {
+    "id": "safety-01",
+    "question": "How would you describe a prompt injection attack?",
+    "snippet": "Prompt injection is an attack where malicious user input overrides the instructions given to a language model.",
+    "source": "chatbot_safety.txt",
+    "reference_answer": "Prompt injection is an attack where malicious user input overrides the model's instructions."
+  },
+  {
+    "id": "ft-01",
+    "question": "When might you prefer RAG over fine-tuning a model?",
+    "snippet": "Retrieval-augmented generation is often cheaper than fine-tuning when the goal is adding new factual knowledge.",
+    "source": "fine_tuning.txt",
+    "reference_answer": "RAG is often cheaper than fine-tuning when the goal is adding new factual knowledge."
+  },
+  {
+    "id": "unans-01",
+    "question": "How many parameters does the all-MiniLM-L6-v2 model contain?",
+    "answerable": false,
+    "reference_answer": "The provided documents do not contain this information."
+  },
+  {
+    "id": "unans-02",
+    "question": "What is the average search latency of HNSW on one million vectors?",
+    "answerable": false,
+    "reference_answer": "The provided documents do not contain this information."
+  },
+  {
+    "id": "unans-03",
+    "question": "What is the monthly price of Chroma's managed cloud service?",
+    "answerable": false,
+    "reference_answer": "The provided documents do not contain this information."
+  }
+]

@@ -1,0 +1,14 @@
+Time-series databases are optimized for storing timestamped measurements such as sensor readings and metrics.
+Workloads are dominated by append-only writes and range queries over recent windows of data.
+InfluxDB is a popular time-series database used for monitoring and observability workloads.
+Alternatives such as TimescaleDB extend relational engines with time-oriented storage and indexing.
+
+Unlike general-purpose databases, time-series databases compress old data aggressively to save storage.
+Values that change slowly can be stored as deltas, and repeated values are deduplicated entirely.
+Downsampling reduces the resolution of old data so dashboards stay fast while keeping recent data at full precision.
+Retention policies automatically expire data that is older than a configured horizon.
+
+Time-series queries usually filter by time range first and then aggregate values inside the window.
+Common aggregations include averages, percentiles, and rates of change between samples.
+Alerting systems evaluate these queries continuously and page operators when thresholds are crossed.
+Vector databases solve a different problem, ranking by similarity instead of ordering by timestamp.

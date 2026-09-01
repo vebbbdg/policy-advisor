@@ -1,0 +1,16 @@
+An embedding model converts text into a fixed-size vector of numbers that captures semantic meaning.
+These vectors let machines compare pieces of text by geometry instead of by exact word overlap.
+Sentences with similar meaning are mapped to vectors that are close together in the vector space.
+Synonyms, paraphrases, and translations tend to land near each other when the model was trained on them.
+
+The all-MiniLM-L6-v2 model produces embeddings with 384 dimensions and runs efficiently on CPU.
+Its small size makes it a common default for prototypes, laptops, and CI pipelines.
+Larger embedding models usually rank better but cost more memory and latency per query.
+Embedding quality directly determines retrieval quality, so choosing the right model matters.
+Benchmark suites such as MTEB publish comparative rankings that help narrow the candidate list.
+
+Retrieval systems should use the same embedding model for documents and for queries.
+Mixing models puts vectors in incompatible spaces and silently destroys retrieval quality.
+If the model is ever upgraded, the whole collection must be re-embedded from scratch.
+Multilingual embedding models are required when the corpus contains several languages.
+Domain-specific corpora sometimes benefit from continued training of a general-purpose embedding model.

@@ -1,0 +1,22 @@
+Retrieval-augmented generation combines a retriever with a language model to ground answers in documents.
+The pattern was popularized because large models cannot see private data and their parametric knowledge goes stale.
+The pipeline has four main stages: chunking, embedding, retrieval, and generation.
+Each stage has its own failure modes, so teams should instrument and evaluate them independently.
+
+Chunking splits long documents into smaller passages so relevant text can be located precisely.
+A chunk that is too large buries the answer in noise, while a chunk that is too small loses context.
+Overlapping chunks help preserve context that would otherwise be lost at split boundaries.
+Semantic chunking, which splits on topic shifts instead of fixed length, can help but is harder to tune.
+The chunking strategy should always be validated against a labeled evaluation set rather than intuition.
+
+During retrieval, the user question is embedded and compared against the stored chunk vectors.
+Hybrid retrieval combines dense vector search with sparse keyword matching such as BM25.
+A reranker model can then rescore the top candidates and promote the most relevant ones.
+Hybrid search plus reranking is a common recipe when pure vector search misses keyword-heavy queries.
+
+During generation, the retrieved passages are injected into the prompt as grounding context.
+The model should be instructed to rely on the context and admit when the answer is not there.
+RAG reduces hallucination because the model can quote evidence instead of relying on memory alone.
+If retrieval returns irrelevant passages, the language model may still produce a wrong answer.
+Evaluation of a RAG system should measure retrieval quality and answer quality separately.
+Showing source citations in the user interface also lets humans verify where each claim came from.
