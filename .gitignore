@@ -23,7 +23,8 @@ env/
 *.swo
 
 # Data & Logs
-data/
+data/*
+!data/policy_corpus/   # 政策语料快照纳入版本控制（阶段 1）
 logs/
 *.db
 *.sqlite
