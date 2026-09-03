@@ -21,7 +21,7 @@ from pydantic import BaseModel
 from core.model import init_llm_model
 from core.memory import keep_recent_messages, inject_rag_prompt
 from core.session import session_manager
-from core.rag import rag_engine, UPLOAD_DIR
+from core.rag import rag_engine, translate_query, UPLOAD_DIR
 from core.uploads import validate_upload, safe_stored_name, MAX_UPLOAD_BYTES
 from core.logger import logger
 
@@ -122,7 +122,9 @@ async def chat_stream(data: ChatInput):
         citations = []
         if data.use_rag and RAG_ENABLED:
             try:
-                docs = await asyncio.to_thread(rag_engine.retrieve, data.message, 3)
+                # 阶段 2.1：中文提问先翻译成英文再检索（英文语料+英文嵌入模型）；纯英文提问原样返回
+                query = await asyncio.to_thread(translate_query, data.message)
+                docs = await asyncio.to_thread(rag_engine.retrieve, query, 3)
                 if docs:
                     context = rag_engine.format_docs(docs)
                     # 阶段 2.2：打包引用元数据（来源+日期+主题），随 SSE 返回前端渲染来源卡片

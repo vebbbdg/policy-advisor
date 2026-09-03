@@ -7,6 +7,7 @@ RAG (Retrieval-Augmented Generation) 检索增强生成模块
 - 硅谷GenAI项目核心加分项
 """
 import os
+import re
 from pathlib import Path
 from typing import List, Optional
 
@@ -18,6 +19,50 @@ from langchain_core.documents import Document
 from core.model import init_embeddings, init_reranker
 from core.retrieval import tokenize, rrf_fuse, top_by_scores
 from core.logger import logger
+
+
+# 查询翻译专用 LLM 客户端（懒加载，未翻译过中文时零开销；无状态 HTTP 客户端，与对话模型互不影响）
+_translator_llm = None
+
+
+def _get_translator_llm():
+    """懒加载翻译用 LLM 客户端"""
+    global _translator_llm
+    if _translator_llm is None:
+        from core.model import init_llm_model
+        _translator_llm = init_llm_model()
+    return _translator_llm
+
+
+def translate_query(text: str) -> str:
+    """
+    查询翻译（阶段 2.1 查询翻译方案）：中文提问翻译成英文，再检索英文语料。
+    相比更换多语言嵌入模型：零索引迁移、术语（OPT/CPT/SEVIS/I-20）翻译零风险。
+    - 无中文的提问原样返回（英文提问不受影响）
+    - 翻译失败降级返回原查询：宁可检索效果打折，不让对话中断
+    """
+    if not re.search(r"[\u4e00-\u9fff]", text):
+        return text
+    try:
+        from langchain_core.messages import HumanMessage, SystemMessage
+        llm = _get_translator_llm()
+        reply = llm.invoke([
+            SystemMessage(
+                "You are a translation engine. Translate the user's question into English "
+                "for document retrieval. Keep policy terms (OPT, CPT, SEVIS, I-20, USCIS, STEM) "
+                "unchanged. Return only the translation, without quotes or explanation."
+            ),
+            HumanMessage(text),
+        ])
+        translated = (reply.content or "").strip().strip('"').strip("'")
+        if not translated:
+            logger.warning("Query translation returned empty, using original query")
+            return text
+        logger.info(f"Query translated to English: {translated!r}")
+        return translated
+    except Exception as e:
+        logger.warning(f"Query translation failed ({e}), using original query")
+        return text
 
 
 # 向量数据库持久化目录
