@@ -93,6 +93,17 @@ class RAGEngine:
         logger.info(f"Document {filename} indexed successfully")
         return len(chunks)
 
+    def add_documents(self, docs: List[Document]) -> int:
+        """
+        批量添加已加载的文档（携带自定义元数据），切片后入向量库。
+        供语料管道使用：切片时每个 chunk 自动继承文档级元数据（如 source_url/crawl_date）。
+        """
+        chunks = self.text_splitter.split_documents(docs)
+        self.vector_store.add_documents(chunks)
+        sources = {d.metadata.get("source", "?") for d in docs}
+        logger.info(f"Indexed {len(chunks)} chunks from {len(docs)} documents: {sorted(sources)}")
+        return len(chunks)
+
     def retrieve(self, query: str, top_k: int = 3) -> List[Document]:
         """检索与问题最相关的top_k个文档片段"""
         results = self.vector_store.similarity_search(query, k=top_k)
