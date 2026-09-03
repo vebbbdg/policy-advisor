@@ -19,12 +19,15 @@ env/
 # IDE
 .vscode/
 .idea/
+.qoder/
 *.swp
 *.swo
 
 # Data & Logs
 data/*
-!data/policy_corpus/   # 政策语料快照纳入版本控制（阶段 1）
+# 政策语料快照目录纳入版本控制（阶段 1）；注意：git 不支持行尾注释，注释必须独占一行
+!data/policy_corpus/
+!data/policy_corpus/**
 logs/
 *.db
 *.sqlite
