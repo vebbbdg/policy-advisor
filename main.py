@@ -119,10 +119,27 @@ async def chat_stream(data: ChatInput):
 
         # 3. RAG检索增强（如果开启）；同步向量检索移入线程池，避免阻塞事件循环
         context = None
+        citations = []
         if data.use_rag and RAG_ENABLED:
             try:
-                context = await asyncio.to_thread(rag_engine.format_context, data.message, 3)
-                if context:
+                docs = await asyncio.to_thread(rag_engine.retrieve, data.message, 3)
+                if docs:
+                    context = rag_engine.format_docs(docs)
+                    # 阶段 2.2：打包引用元数据（来源+日期+主题），随 SSE 返回前端渲染来源卡片
+                    # 注意：top-k 片段可能来自同一文档，按 source_url 去重，每个来源只展示一张卡片
+                    seen_urls = set()
+                    for d in docs:
+                        meta = d.metadata
+                        url = meta.get("source_url", "")
+                        if not url or url in seen_urls:
+                            continue
+                        seen_urls.add(url)
+                        citations.append({
+                            "title": meta.get("title") or meta.get("source", "unknown"),
+                            "source_url": url,
+                            "crawl_date": meta.get("crawl_date", ""),
+                            "policy_topic": meta.get("policy_topic", ""),
+                        })
                     # 将检索到的文档注入系统提示词
                     rag_prompt = (
                         "Use the following retrieved context to answer the user's question. "
@@ -131,7 +148,7 @@ async def chat_stream(data: ChatInput):
                     )
                     # 重建system消息为新dict，不污染会话存储中的原始prompt
                     optimized_msgs = inject_rag_prompt(optimized_msgs, rag_prompt)
-                    logger.info(f"RAG: injected {len(context)} chars of context")
+                    logger.info(f"RAG: injected {len(context)} chars of context, {len(citations)} citations")
             except Exception as e:
                 logger.warning(f"RAG retrieval failed: {e}")
 
@@ -149,8 +166,8 @@ async def chat_stream(data: ChatInput):
                         })
                         yield f"data: {payload}\n\n"
 
-                # 完成标记
-                yield f"data: {json.dumps({'done': True, 'session_id': session_id})}\n\n"
+                # 完成标记：携带引用元数据（阶段 2.2）
+                yield f"data: {json.dumps({'done': True, 'session_id': session_id, 'citations': citations})}\n\n"
                 # 保存AI回复
                 session_manager.add_message(session_id, "assistant", full_reply)
                 logger.info(f"Session {session_id}: response completed ({len(full_reply)} chars)")
