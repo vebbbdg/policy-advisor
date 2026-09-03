@@ -1,0 +1,104 @@
+{
+  "crawl_date": "2026-09-01T15:16:03Z",
+  "sources": [
+    {
+      "slug": "uscis-opt",
+      "source_url": "https://www.uscis.gov/working-in-the-united-states/students-and-exchange-visitors/optional-practical-training-opt-for-f-1-students",
+      "crawl_date": "2026-09-01T15:16:03Z",
+      "policy_topic": "OPT",
+      "source_org": "USCIS",
+      "title": "Optional Practical Training (OPT) for F-1 Students",
+      "content_hash": "ee7a85cf04e1608c14cb327c2cf4dbe65724bd2d025ea5c5ce3e60d2dd8d42f5",
+      "char_count": 8192,
+      "status": "ok"
+    },
+    {
+      "slug": "uscis-stem-opt",
+      "source_url": "https://www.uscis.gov/working-in-the-united-states/students-and-exchange-visitors/optional-practical-training-extension-for-stem-students-stem-opt",
+      "crawl_date": "2026-09-01T15:16:03Z",
+      "policy_topic": "STEM_OPT",
+      "source_org": "USCIS",
+      "title": "Optional Practical Training Extension for STEM Students (STEM OPT)",
+      "content_hash": "451924151989d2079b9352278d77fc7ff0a49a6f232ee4bfac4661e266cd306a",
+      "char_count": 11779,
+      "status": "ok"
+    },
+    {
+      "slug": "uscis-students-employment",
+      "source_url": "https://www.uscis.gov/working-in-the-united-states/students-and-exchange-visitors/students-and-employment",
+      "crawl_date": "2026-09-01T15:16:03Z",
+      "policy_topic": "GENERAL",
+      "source_org": "USCIS",
+      "title": "Students and Employment",
+      "content_hash": "e158fc58774e0583ed81648efc9ae0bbf54723139f9a4cbae8c36665fa988863",
+      "char_count": 3906,
+      "status": "ok"
+    },
+    {
+      "slug": "uscis-policy-manual-f5",
+      "source_url": "https://www.uscis.gov/policy-manual/volume-2-part-f-chapter-5",
+      "crawl_date": "2026-09-01T15:16:03Z",
+      "policy_topic": "OPT",
+      "source_org": "USCIS",
+      "title": "Chapter 5 - Practical Training",
+      "content_hash": "52d0906b392057a97bedb1bab160359603ba4869225c6f529a01b8be62cd5400",
+      "char_count": 57251,
+      "status": "ok"
+    },
+    {
+      "slug": "uscis-i765",
+      "source_url": "https://www.uscis.gov/i-765",
+      "crawl_date": "2026-09-01T15:16:03Z",
+      "policy_topic": "OPT",
+      "source_org": "USCIS",
+      "title": "I-765, Application for Employment Authorization",
+      "content_hash": "5fc5f03a499fe3810911de9e061f2fa4b56136dc7cbd7bfb4d6ad8aad797b294",
+      "char_count": 25342,
+      "status": "ok"
+    },
+    {
+      "slug": "sit-student-employment-overview",
+      "source_url": "https://studyinthestates.dhs.gov/sevis-help-hub/student-records/fm-student-employment/student-employment-overview",
+      "crawl_date": "2026-09-01T15:16:03Z",
+      "policy_topic": "GENERAL",
+      "source_org": "DHS-SEVP",
+      "title": "Student Employment Overview | Study in the States",
+      "content_hash": "e5b75b244c470aa599d3628f09ec6d0ebaf990c8ce2818b86b2b5c221b4abf28",
+      "char_count": 5401,
+      "status": "ok"
+    },
+    {
+      "slug": "sit-cpt",
+      "source_url": "https://studyinthestates.dhs.gov/sevis-help-hub/student-records/fm-student-employment/f-1-curricular-practical-training-cpt",
+      "crawl_date": "2026-09-01T15:16:03Z",
+      "policy_topic": "CPT",
+      "source_org": "DHS-SEVP",
+      "title": "F-1 Curricular Practical Training (CPT) | Study in the States",
+      "content_hash": "4285c5b09e60c1fb8761e86835aa3484b6d239320b0feda5f6972d7dfc4ead90",
+      "char_count": 13355,
+      "status": "ok"
+    },
+    {
+      "slug": "sit-opt",
+      "source_url": "https://studyinthestates.dhs.gov/sevis-help-hub/student-records/fm-student-employment/f-1-optional-practical-training-opt",
+      "crawl_date": "2026-09-01T15:16:03Z",
+      "policy_topic": "OPT",
+      "source_org": "DHS-SEVP",
+      "title": "F-1 Optional Practical Training (OPT) | Study in the States",
+      "content_hash": "8d2299847008cfa25417ed535abfee6143a7cceba88ad35b45190e6831ebe524",
+      "char_count": 21069,
+      "status": "ok"
+    },
+    {
+      "slug": "sit-stem-opt",
+      "source_url": "https://studyinthestates.dhs.gov/sevis-help-hub/student-records/fm-student-employment/f-1-stem-optional-practical-training-opt",
+      "crawl_date": "2026-09-01T15:16:03Z",
+      "policy_topic": "STEM_OPT",
+      "source_org": "DHS-SEVP",
+      "title": "F-1 STEM Optional Practical Training (OPT) Extension | Study in the States",
+      "content_hash": "24a2642fecb6eb80324fb074bb9d41c9c9202635517eca25e0bc25cc7aaa2f53",
+      "char_count": 27499,
+      "status": "ok"
+    }
+  ]
+}
