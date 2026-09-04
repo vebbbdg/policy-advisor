@@ -1,138 +1,317 @@
 [
   {
-    "id": "vecdb-01",
-    "question": "How are vector databases different from relational databases?",
-    "snippet": "Unlike relational databases that match exact values, vector databases measure similarity between vectors.",
-    "source": "vector_databases.txt",
-    "reference_answer": "Relational databases match exact values, while vector databases measure similarity between vectors."
+    "id": "opt-01",
+    "question": "What is Optional Practical Training (OPT) for F-1 students?",
+    "question_zh": "什么是 F-1 学生的 OPT（选择性实习训练）？",
+    "snippet": "Optional practical training (OPT) is temporary employment that is directly related to an F-1 student’s major area of study.",
+    "source": "uscis-opt.md",
+    "reference_answer": "OPT is temporary employment directly related to an F-1 student's major area of study."
   },
   {
-    "id": "vecdb-02",
-    "question": "Which similarity metrics are most commonly used in vector search?",
-    "snippet": "The most common similarity metrics are cosine similarity and Euclidean distance.",
-    "source": "vector_databases.txt",
-    "reference_answer": "Cosine similarity and Euclidean distance are the most common similarity metrics."
+    "id": "opt-02",
+    "question": "How long is the standard OPT employment authorization?",
+    "question_zh": "标准 OPT 工作许可有多长时间？",
+    "snippet": [
+      "Eligible students can apply to receive up to 12 months of OPT employment authorization before completing their academic studies (pre-completion) and/or after completing their academic studies (post-completion).",
+      "A student may be authorized for 12 months of OPT and would become eligible for another 12 months of practical training if the student were to change to a higher educational level."
+    ],
+    "source": "uscis-opt.md",
+    "reference_answer": "Eligible students can receive up to 12 months of OPT employment authorization (pre-completion and/or post-completion)."
   },
   {
-    "id": "vecdb-03",
-    "question": "What is Chroma typically used for?",
-    "snippet": "Chroma is an open-source vector database that is popular for prototyping RAG applications.",
-    "source": "vector_databases.txt",
-    "reference_answer": "Chroma is an open-source vector database popular for prototyping RAG applications."
+    "id": "opt-03",
+    "question": "How does pre-completion OPT affect the post-completion OPT period?",
+    "question_zh": "毕业前 OPT 会如何影响毕业后 OPT 的时长？",
+    "snippet": [
+      "However, all periods of pre-completion OPT will be deducted from the available period of post-completion OPT.",
+      "If an F-1 student applies for post-completion OPT at the same educational level at which the student had pre-completion OPT, the amount of time approved for pre-completion OPT is deducted from the post-completion OPT authorized period."
+    ],
+    "source": "uscis-opt.md",
+    "reference_answer": "All periods of pre-completion OPT are deducted from the available period of post-completion OPT."
   },
   {
-    "id": "vecdb-04",
-    "question": "What trade-off do approximate nearest neighbor algorithms like HNSW make?",
-    "snippet": "Approximate nearest neighbor algorithms such as HNSW trade a small amount of recall for much faster search.",
-    "source": "vector_databases.txt",
-    "reference_answer": "HNSW-style approximate nearest neighbor algorithms trade a small amount of recall for much faster search."
+    "id": "opt-04",
+    "question": "When can I apply for post-completion OPT relative to completing my degree?",
+    "question_zh": "我应该在毕业前后多久申请毕业后 OPT？",
+    "snippet": [
+      "May apply up to 90 days before you complete your degree, but no later than 60 days after you complete your degree.",
+      "A student may apply for post-completion OPT no earlier than 90 days prior to the student’s program end date and no later than 60 days after the student’s program end-date."
+    ],
+    "source": "uscis-opt.md",
+    "reference_answer": "You may apply up to 90 days before completing your degree, but no later than 60 days after completion."
   },
   {
-    "id": "vecdb-05",
-    "question": "How does metadata filtering affect a similarity search?",
-    "snippet": "Metadata filtering lets you restrict similarity search to a subset of the collection.",
-    "source": "vector_databases.txt",
-    "reference_answer": "Metadata filtering restricts similarity search to a subset of the collection."
+    "id": "opt-05",
+    "question": "Can I start working before my OPT application is approved?",
+    "question_zh": "OPT 申请批准之前我可以开始工作吗？",
+    "snippet": [
+      "You may not begin your pre- or post-completion OPT until after we approve your Form I-765 and you receive your Employment Authorization Document (EAD).",
+      "The student must not begin working before the start date on the EAD."
+    ],
+    "source": "uscis-opt.md",
+    "reference_answer": "No. You may not begin OPT until USCIS approves Form I-765 and you receive the EAD."
   },
   {
-    "id": "rag-01",
-    "question": "What are the main stages of a RAG pipeline?",
-    "snippet": "The pipeline has four main stages: chunking, embedding, retrieval, and generation.",
-    "source": "rag_pipeline.txt",
-    "reference_answer": "A RAG pipeline has four main stages: chunking, embedding, retrieval, and generation."
+    "id": "opt-06",
+    "question": "What happens to my OPT authorization if I transfer to another school?",
+    "question_zh": "如果我转学，OPT 授权会怎样？",
+    "snippet": [
+      "If you transfer to another school or begin studies at another educational level (for example, you completed a bachelor’s degree and are starting a master’s program), your authorization to engage in OPT employment will automatically terminate.",
+      "OPT, including STEM OPT, is automatically terminated if an F-1 student: - Transfers to another school;"
+    ],
+    "source": "uscis-opt.md",
+    "reference_answer": "Your OPT authorization automatically terminates if you transfer schools or begin study at another educational level."
   },
   {
-    "id": "rag-02",
-    "question": "Why is chunk overlap used when splitting documents?",
-    "snippet": "Overlapping chunks help preserve context that would otherwise be lost at split boundaries.",
-    "source": "rag_pipeline.txt",
-    "reference_answer": "Chunk overlap preserves context that would otherwise be lost at split boundaries."
+    "id": "opt-07",
+    "question": "How many hours can I work on pre-completion OPT while school is in session?",
+    "question_zh": "学期期间参加毕业前 OPT 每周可以工作多少小时？",
+    "snippet": "If you are authorized to participate in pre-completion OPT, you may work (20 hours or less per week) while school is in session.",
+    "source": "uscis-opt.md",
+    "reference_answer": "You may work 20 hours or less per week while school is in session; full time when school is not in session."
   },
   {
-    "id": "rag-03",
-    "question": "How does RAG help reduce hallucination?",
-    "snippet": "RAG reduces hallucination because the model can quote evidence instead of relying on memory alone.",
-    "source": "rag_pipeline.txt",
-    "reference_answer": "RAG reduces hallucination because the model can quote evidence from documents instead of relying on memory alone."
+    "id": "opt-08",
+    "question": "Who recommends OPT in SEVIS and who applies to USCIS for the work permit?",
+    "question_zh": "OPT 由谁在 SEVIS 中推荐、由谁向 USCIS 申请工作许可？",
+    "snippet": "While a Designated School Official (DSO) recommends OPT in SEVIS, it is the student who must apply for the work permit with the U.S. Citizenship and Immigration Service (USCIS).",
+    "source": "sit-opt.md",
+    "reference_answer": "The DSO recommends OPT in SEVIS; the student applies to USCIS for the work permit."
   },
   {
-    "id": "rag-04",
-    "question": "What happens when the retriever returns irrelevant passages?",
-    "snippet": "If retrieval returns irrelevant passages, the language model may still produce a wrong answer.",
-    "source": "rag_pipeline.txt",
-    "reference_answer": "If retrieval returns irrelevant passages, the language model may still produce a wrong answer."
+    "id": "opt-09",
+    "question": "How much regular OPT is available at each higher level of study?",
+    "question_zh": "每升高一个学习层次可以获得多少常规 OPT？",
+    "snippet": "Twelve months of Regular OPT is available for each higher level of study.",
+    "source": "sit-opt.md",
+    "reference_answer": "Twelve months of regular OPT is available for each higher level of study (e.g., 12 months for a bachelor's and another 12 for a master's)."
   },
   {
-    "id": "emb-01",
-    "question": "What does an embedding model do with text?",
-    "snippet": "An embedding model converts text into a fixed-size vector of numbers that captures semantic meaning.",
-    "source": "embedding_models.txt",
-    "reference_answer": "An embedding model converts text into a fixed-size numeric vector that captures semantic meaning."
+    "id": "opt-10",
+    "question": "Can a student who was authorized for 12 months of full-time CPT apply for OPT?",
+    "question_zh": "已经被授权 12 个月全职 CPT 的学生还能申请 OPT 吗？",
+    "snippet": [
+      "The student has not been authorized for 12 months or more of full-time Curricular Practical Training (CPT).",
+      "An F-1 student who has received 1 year or more of full-time CPT is ineligible for post-completion OPT at the same educational level."
+    ],
+    "source": "sit-opt.md",
+    "reference_answer": "No. A student authorized for 12 months or more of full-time CPT is not eligible for OPT."
   },
   {
-    "id": "emb-02",
-    "question": "How many dimensions do all-MiniLM-L6-v2 embeddings have?",
-    "snippet": "The all-MiniLM-L6-v2 model produces embeddings with 384 dimensions and runs efficiently on CPU.",
-    "source": "embedding_models.txt",
-    "reference_answer": "all-MiniLM-L6-v2 produces 384-dimensional embeddings."
+    "id": "stem-01",
+    "question": "How long is the STEM OPT extension?",
+    "question_zh": "STEM OPT 延期有多长时间？",
+    "snippet": [
+      "Certain F-1 students who receive science, technology, engineering, and mathematics (STEM) degrees may apply for a 24-month extension of their post-completion optional practical training (OPT).",
+      "If the F-1 student establishes eligibility, DHS grants the STEM OPT 24-month extension for a fixed and uninterrupted period of 24 consecutive months."
+    ],
+    "source": "uscis-stem-opt.md",
+    "reference_answer": "The STEM OPT extension is 24 months of additional post-completion OPT."
   },
   {
-    "id": "emb-03",
-    "question": "Why should documents and queries be embedded with the same model?",
-    "snippet": "Retrieval systems should use the same embedding model for documents and for queries.",
-    "source": "embedding_models.txt",
-    "reference_answer": "Retrieval systems should use the same embedding model for documents and queries so both live in one comparable vector space."
+    "id": "stem-02",
+    "question": "What E-Verify enrollment must a STEM OPT employer have?",
+    "question_zh": "STEM OPT 的雇主必须加入什么验证计划？",
+    "snippet": [
+      "Be enrolled in E-Verify, as evidenced by either a valid E-Verify company identification number or, if the employer is using an employer agent to create its E-Verify cases, a valid E-Verify client company identification number.",
+      "Are employed by an employer who is enrolled in and is using E-Verify; and"
+    ],
+    "source": "uscis-stem-opt.md",
+    "reference_answer": "The employer must be enrolled in E-Verify with a valid company identification number (or client company identification number if using an employer agent)."
   },
   {
-    "id": "tsdb-01",
-    "question": "What kind of data are time-series databases built to store?",
-    "snippet": "Time-series databases are optimized for storing timestamped measurements such as sensor readings and metrics.",
-    "source": "time_series_databases.txt",
-    "reference_answer": "Time-series databases are optimized for timestamped measurements like sensor readings and metrics."
+    "id": "stem-03",
+    "question": "What happens if my OPT expires while my STEM OPT extension application is pending?",
+    "question_zh": "如果 STEM OPT 延期申请还在审理时我的 OPT 到期了会怎样？",
+    "snippet": "If you file your STEM OPT extension application on time and your OPT period expires while your extension application is pending, we will automatically extend your employment authorization for 180 days.",
+    "source": "uscis-stem-opt.md",
+    "reference_answer": "USCIS automatically extends your employment authorization for 180 days while a timely-filed STEM OPT extension application is pending."
   },
   {
-    "id": "tsdb-02",
-    "question": "How do time-series databases keep storage costs low for historical data?",
-    "snippet": "Unlike general-purpose databases, time-series databases compress old data aggressively to save storage.",
-    "source": "time_series_databases.txt",
-    "reference_answer": "They compress old data aggressively to save storage."
+    "id": "stem-04",
+    "question": "How many unemployment days are allowed during initial post-completion OPT?",
+    "question_zh": "初始毕业后 OPT 期间允许失业多少天？",
+    "snippet": "Initial post-completion OPT only Up to 90 days 90 days",
+    "source": "uscis-stem-opt.md",
+    "reference_answer": "Up to 90 days of unemployment are allowed during initial post-completion OPT."
   },
   {
-    "id": "img-01",
-    "question": "What makes CLIP useful for connecting images with text?",
-    "snippet": "CLIP produces embeddings where images and their text captions are close together in the same vector space.",
-    "source": "image_embeddings.txt",
-    "reference_answer": "CLIP embeds images and their text captions close together in one shared vector space."
+    "id": "stem-05",
+    "question": "What is the total unemployment allowance for OPT plus the 24-month STEM OPT extension?",
+    "question_zh": "OPT 加上 24 个月 STEM OPT 延期总共允许失业多少天？",
+    "snippet": "24-month extension An additional 60 days 150 days",
+    "source": "uscis-stem-opt.md",
+    "reference_answer": "An additional 60 days on top of the initial 90, for a total of 150 days during the OPT period."
   },
   {
-    "id": "safety-01",
-    "question": "How would you describe a prompt injection attack?",
-    "snippet": "Prompt injection is an attack where malicious user input overrides the instructions given to a language model.",
-    "source": "chatbot_safety.txt",
-    "reference_answer": "Prompt injection is an attack where malicious user input overrides the model's instructions."
+    "id": "stem-06",
+    "question": "How often must STEM OPT students report to their DSO to confirm their information?",
+    "question_zh": "STEM OPT 学生需要多久向 DSO 确认一次个人信息？",
+    "snippet": [
+      "Report to your DSO every 6 months to confirm the information listed above, even if none of your information has changed.",
+      "Complete a validation report every 6 months, confirming that the legal name, residential or mailing address, employer name, employer address, and loss of employment has not changed."
+    ],
+    "source": "uscis-stem-opt.md",
+    "reference_answer": "Every 6 months, even if none of the information has changed."
   },
   {
-    "id": "ft-01",
-    "question": "When might you prefer RAG over fine-tuning a model?",
-    "snippet": "Retrieval-augmented generation is often cheaper than fine-tuning when the goal is adding new factual knowledge.",
-    "source": "fine_tuning.txt",
-    "reference_answer": "RAG is often cheaper than fine-tuning when the goal is adding new factual knowledge."
+    "id": "stem-07",
+    "question": "Within how many days must a STEM OPT student report a change of address to the DSO?",
+    "question_zh": "STEM OPT 学生地址变更后需在多少天内报告 DSO？",
+    "snippet": "Report changes to the following information to your DSO within 10 days of the change, specifically: Your legal name; Your residential or mailing address; Your email address; Your employer’s name; and Your employer’s address.",
+    "source": "uscis-stem-opt.md",
+    "reference_answer": "Within 10 days of the change (legal name, address, email, employer name and address)."
+  },
+  {
+    "id": "stem-08",
+    "question": "Which training form must STEM OPT employers complete as part of the extension?",
+    "question_zh": "STEM OPT 雇主需要填写哪份培训计划表格？",
+    "snippet": "As part of the STEM OPT extension, employers must complete the appropriate parts of Form I-983, Training Plan for STEM OPT Students.",
+    "source": "uscis-stem-opt.md",
+    "reference_answer": "Form I-983, Training Plan for STEM OPT Students."
+  },
+  {
+    "id": "stem-09",
+    "question": "How early can I submit Form I-765 for a STEM OPT extension?",
+    "question_zh": "STEM OPT 延期最早可以提前多久提交 I-765 表格？",
+    "snippet": "Submit the Form I-765, Application for Employment Authorization , up to 90 days before your current OPT employment authorization expires, and within 60 days of the date your designated school official (DSO) enters the recommendation for OPT into your Student and Exchange Visitor Information System (SEVIS) record.",
+    "source": "uscis-stem-opt.md",
+    "reference_answer": "Up to 90 days before your current OPT expires, and within 60 days of your DSO entering the recommendation into SEVIS."
+  },
+  {
+    "id": "stem-10",
+    "question": "How quickly must an employer report a STEM OPT student's termination of employment?",
+    "question_zh": "雇主必须在多长时间内报告 STEM OPT 学生离职？",
+    "snippet": "Report the STEM OPT student’s termination of employment or departure to the DSO within 5 business days.",
+    "source": "uscis-stem-opt.md",
+    "reference_answer": "Within 5 business days of the termination or departure."
+  },
+  {
+    "id": "stem-11",
+    "question": "Can a STEM OPT student replace a U.S. worker?",
+    "question_zh": "STEM OPT 学生可以替代美国工人吗？",
+    "snippet": "The STEM OPT student will not replace a full- or part-time, temporary or permanent U.S. worker; and",
+    "source": "uscis-stem-opt.md",
+    "reference_answer": "No. The employer must ensure the STEM OPT student will not replace any full- or part-time, temporary or permanent U.S. worker."
+  },
+  {
+    "id": "cpt-01",
+    "question": "What effect does one year of full-time CPT have on OPT eligibility?",
+    "question_zh": "一年全职 CPT 会对 OPT 资格产生什么影响？",
+    "snippet": [
+      "One year of full-time CPT eliminates a student’s eligibility for OPT .",
+      "An F-1 student who has received 1 year or more of full-time CPT is ineligible for post-completion OPT at the same educational level."
+    ],
+    "source": "sit-cpt.md",
+    "reference_answer": "One year of full-time CPT eliminates the student's eligibility for OPT."
+  },
+  {
+    "id": "cpt-02",
+    "question": "When must CPT be authorized relative to the start of work?",
+    "question_zh": "CPT 必须在开始工作之前还是之后获得授权？",
+    "snippet": "CPT must be authorized before the student can begin work. The student cannot begin work before the CPT start date indicated on the Form I-20.",
+    "source": "sit-cpt.md",
+    "reference_answer": "CPT must be authorized before the student can begin work; work cannot start before the CPT start date on the Form I-20."
+  },
+  {
+    "id": "cpt-03",
+    "question": "How long must an F-1 student have been enrolled to be eligible for CPT?",
+    "question_zh": "F-1 学生需要全日制注册满多久才有 CPT 资格？",
+    "snippet": [
+      "Has been lawfully enrolled on a full-time basis for at least a full academic year.",
+      "Have completed one full academic year and be lawfully enrolled on a full-time basis at an approved ICE SEVP-certified school;"
+    ],
+    "source": "sit-cpt.md",
+    "reference_answer": "At least one full academic year of lawful full-time enrollment (with an exception for graduate programs requiring earlier training)."
+  },
+  {
+    "id": "cpt-04",
+    "question": "Does an internship in my home country require CPT authorization?",
+    "question_zh": "在我自己国家进行的实习需要 CPT 授权吗？",
+    "snippet": "CPT authorization is only required when the training is inside the United States.",
+    "source": "sit-cpt.md",
+    "reference_answer": "No. CPT authorization is only required when the training takes place inside the United States."
+  },
+  {
+    "id": "cpt-05",
+    "question": "What weekly hour threshold separates full-time from part-time CPT?",
+    "question_zh": "区分全职和兼职 CPT 的每周工时界限是多少小时？",
+    "snippet": "Full Time : More than 20 hours per week Part Time : 20 hours of less per week",
+    "source": "sit-cpt.md",
+    "reference_answer": "More than 20 hours per week is full-time CPT; 20 hours or less per week is part-time."
+  },
+  {
+    "id": "cpt-06",
+    "question": "Can a student hold more than one CPT authorization at the same time?",
+    "question_zh": "学生可以同时持有多个 CPT 授权吗？",
+    "snippet": "Student can have more than one CPT authorization at the same time.",
+    "source": "sit-cpt.md",
+    "reference_answer": "Yes, but a separate CPT authorization is needed for each employer and each CPT segment."
+  },
+  {
+    "id": "gen-01",
+    "question": "Can F-1 students work off-campus during their first academic year?",
+    "question_zh": "F-1 学生在第一学年可以校外打工吗？",
+    "snippet": "F-1 students may not work off-campus during the first academic year, but may accept on-campus employment subject to certain conditions and restrictions.",
+    "source": "uscis-students-employment.md",
+    "reference_answer": "No. F-1 students may not work off-campus during the first academic year, but may accept on-campus employment subject to conditions."
+  },
+  {
+    "id": "gen-02",
+    "question": "Do international students need a Social Security number to work in the United States?",
+    "question_zh": "国际学生在美国工作需要社会安全号吗？",
+    "snippet": "Students who work in the United States are required to obtain a social security number (SSN).",
+    "source": "sit-student-employment-overview.md",
+    "reference_answer": "Yes. Students who work in the United States are required to obtain a social security number."
+  },
+  {
+    "id": "gen-03",
+    "question": "Who authorizes OPT and through what document?",
+    "question_zh": "OPT 由谁授权、通过什么文件发放？",
+    "snippet": [
+      "OPT must be authorized by the U.S. Citizenship and Immigration Services (USCIS) through the issuance of an Employment Authorization Document (EAD).",
+      "Each period of OPT must be recommended by the DSO and authorized by USCIS, as shown by a valid EAD."
+    ],
+    "source": "sit-student-employment-overview.md",
+    "reference_answer": "USCIS authorizes OPT through the issuance of an Employment Authorization Document (EAD)."
+  },
+  {
+    "id": "gen-04",
+    "question": "Who authorizes CPT and where is the authorization printed?",
+    "question_zh": "CPT 由谁授权、授权信息打印在哪个文件上？",
+    "snippet": "If eligible, DSO authorizes CPT in SEVIS, and the authorization prints on the student’s Form I-20.",
+    "source": "sit-cpt.md",
+    "reference_answer": "The DSO authorizes CPT in SEVIS, and the authorization prints on the student's Form I-20."
+  },
+  {
+    "id": "gen-05",
+    "question": "Must off-campus training employment be related to the student's area of study?",
+    "question_zh": "校外培训就业必须与学生的专业领域相关吗？",
+    "snippet": [
+      "For both F-1 and M-1 students any off-campus training employment must be related to their area of study and must be authorized prior to starting any work by the Designated School Official",
+      "All OPT must be directly related to your major area of study."
+    ],
+    "source": "uscis-students-employment.md",
+    "reference_answer": "Yes. Off-campus training employment must be related to the student's area of study and authorized by the DSO and USCIS before starting work."
   },
   {
     "id": "unans-01",
-    "question": "How many parameters does the all-MiniLM-L6-v2 model contain?",
+    "question": "What was the H-1B lottery selection rate for fiscal year 2026?",
+    "question_zh": "2026 财年 H-1B 抽签的中签率是多少？",
     "answerable": false,
     "reference_answer": "The provided documents do not contain this information."
   },
   {
     "id": "unans-02",
-    "question": "What is the average search latency of HNSW on one million vectors?",
+    "question": "How long is the green card backlog for EB-2 applicants born in India?",
+    "question_zh": "印度出生的 EB-2 申请人绿卡排期要等多久？",
     "answerable": false,
     "reference_answer": "The provided documents do not contain this information."
   },
   {
     "id": "unans-03",
-    "question": "What is the monthly price of Chroma's managed cloud service?",
+    "question": "What is the minimum annual salary a STEM OPT employer must pay?",
+    "question_zh": "STEM OPT 雇主必须支付的最低年薪是多少？",
     "answerable": false,
     "reference_answer": "The provided documents do not contain this information."
   }

@@ -1,14 +1,16 @@
 """
-RAG 评估运行器
+RAG 评估运行器（阶段 2.4：面向政策语料）
 
 流程：
-1. 在临时目录中隔离索引评估语料（不触碰生产 data/vectordb）
+1. 在临时目录中隔离索引生产政策语料 data/policy_corpus（不触碰生产 data/vectordb）
 2. 对每条评估问题执行 top-k 检索，计算 Recall@k / MRR / Precision@k
-3. --judge 模式下：注入上下文生成答案，再用 LLM-as-judge 打分（1-5）
-4. 打印汇总表，并把明细保存到 eval/results/
+3. --translate 模式下：用中文问法 question_zh 先翻译成英文再检索（阶段 2.1 查询翻译方案的数据验收）
+4. --judge 模式下：注入上下文生成答案，再用 LLM-as-judge 打分（1-5）
+5. 打印汇总表，并把明细保存到 eval/results/
 
 用法:
-    python -m eval.run_eval                                # 仅检索指标（向量检索）
+    python -m eval.run_eval                                # 仅检索指标（英文问法基准）
+    python -m eval.run_eval --translate                    # 中文问法→翻译→检索（对比英文基准）
     python -m eval.run_eval --top-k 5                      # 自定义 top-k
     python -m eval.run_eval --retriever hybrid             # BM25+向量混合检索（RRF）
     python -m eval.run_eval --retriever rerank             # 混合召回 + cross-encoder精排
@@ -25,7 +27,6 @@ from eval.metrics import recall_at_k, mrr, precision_at_k
 from eval.judge import judge_answer, judge_refusal
 
 EVAL_DIR = Path(__file__).parent
-CORPUS_DIR = EVAL_DIR / "corpus"
 DATASET_PATH = EVAL_DIR / "dataset.json"
 RESULTS_DIR = EVAL_DIR / "results"
 
@@ -41,13 +42,13 @@ def load_dataset(path: Path = DATASET_PATH):
         return json.load(f)
 
 
-def build_index(corpus_dir: Path, tmp_dir: str):
-    """在临时目录新建独立的 RAG 引擎并索引语料"""
+def build_index(tmp_dir: str):
+    """在临时目录新建独立的 RAG 引擎并索引生产政策语料（data/policy_corpus）"""
     from core.rag import RAGEngine
+    from crawler.ingest import load_corpus
 
     engine = RAGEngine(persist_directory=tmp_dir)
-    for doc_path in sorted(corpus_dir.glob("*.txt")):
-        engine.add_document(str(doc_path), doc_path.name)
+    engine.add_documents(load_corpus())
     return engine
 
 
@@ -73,7 +74,7 @@ def generate_answer(model, context: str, question: str) -> str:
     return response.content if hasattr(response, "content") else str(response)
 
 
-def run_evaluation(top_k: int, use_judge: bool, retriever: str = "dense"):
+def run_evaluation(top_k: int, use_judge: bool, retriever: str = "dense", translate: bool = False):
     dataset = load_dataset()
     model = None
     if use_judge:
@@ -83,22 +84,30 @@ def run_evaluation(top_k: int, use_judge: bool, retriever: str = "dense"):
     results = []
     tmp_dir = tempfile.mkdtemp(prefix="rag_eval_")
     try:
-        engine = build_index(CORPUS_DIR, tmp_dir)
-        print(f"Indexed {engine.get_document_count()} chunks from {len(list(CORPUS_DIR.glob('*.txt')))} docs\n")
+        engine = build_index(tmp_dir)
+        print(f"Indexed {engine.get_document_count()} chunks from policy corpus\n")
 
         for item in dataset:
             answerable = item.get("answerable", True)
-            if retriever == "hybrid":
-                docs = engine.retrieve_hybrid(item["question"], top_k=top_k)
-            elif retriever == "rerank":
-                docs = engine.retrieve_reranked(item["question"], top_k=top_k)
+            # 翻译路径（阶段 2.1 验收）：用中文问法先翻译成英文再检索；无中文问法的条目回退英文原文
+            if translate and item.get("question_zh"):
+                from core.rag import translate_query
+                query = translate_query(item["question_zh"])
             else:
-                docs = engine.retrieve(item["question"], top_k=top_k)
+                query = item["question"]
+
+            if retriever == "hybrid":
+                docs = engine.retrieve_hybrid(query, top_k=top_k)
+            elif retriever == "rerank":
+                docs = engine.retrieve_reranked(query, top_k=top_k)
+            else:
+                docs = engine.retrieve(query, top_k=top_k)
             chunks = [d.page_content for d in docs]
 
             row = {
                 "id": item["id"],
                 "question": item["question"],
+                "query_used": query,
                 "answerable": answerable,
                 "retriever": retriever,
                 "retrieved_sources": [d.metadata.get("source", "unknown") for d in docs],
@@ -143,14 +152,14 @@ def run_evaluation(top_k: int, use_judge: bool, retriever: str = "dense"):
     return results
 
 
-def summarize(results, top_k: int, use_judge: bool, retriever: str = "dense"):
+def summarize(results, top_k: int, use_judge: bool, retriever: str = "dense", translate: bool = False):
     answerable = [r for r in results if r.get("answerable", True)]
     probes = [r for r in results if not r.get("answerable", True)]
     n = len(answerable)
     avg = lambda rows, key: sum(r[key] for r in rows) / len(rows) if rows else 0.0
 
     print("\n" + "=" * 46)
-    print(f" Evaluation summary ({n} answerable + {len(probes)} probes, top_k={top_k}, retriever={retriever})")
+    print(f" Evaluation summary ({n} answerable + {len(probes)} probes, top_k={top_k}, retriever={retriever}, translate={translate})")
     print("=" * 46)
     print(f" Recall@{top_k}:     {avg(answerable, 'recall_at_k'):.3f}")
     print(f" MRR:          {avg(answerable, 'mrr'):.3f}")
@@ -165,12 +174,12 @@ def summarize(results, top_k: int, use_judge: bool, retriever: str = "dense"):
     print("=" * 46)
 
 
-def save_results(results, top_k: int, use_judge: bool, retriever: str = "dense") -> Path:
+def save_results(results, top_k: int, use_judge: bool, retriever: str = "dense", translate: bool = False) -> Path:
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    out_path = RESULTS_DIR / f"eval_{stamp}_{retriever}_k{top_k}{'' if not use_judge else '_judged'}.json"
+    out_path = RESULTS_DIR / f"eval_{stamp}_{retriever}_k{top_k}{'_translated' if translate else ''}{'' if not use_judge else '_judged'}.json"
     with open(out_path, "w", encoding="utf-8") as f:
-        json.dump({"top_k": top_k, "retriever": retriever, "judged": use_judge, "results": results}, f, indent=2, ensure_ascii=False)
+        json.dump({"top_k": top_k, "retriever": retriever, "judged": use_judge, "translate": translate, "results": results}, f, indent=2, ensure_ascii=False)
     return out_path
 
 
@@ -181,11 +190,14 @@ def main():
     parser.add_argument("--retriever", choices=["dense", "hybrid", "rerank"], default="dense",
                         help="dense = vector only; hybrid = BM25 + vector with RRF fusion; "
                              "rerank = hybrid candidates + cross-encoder reranking")
+    parser.add_argument("--translate", action="store_true",
+                        help="Evaluate the query-translation path: Chinese questions (question_zh) are "
+                             "translated to English before retrieval (Phase 2.1 acceptance test)")
     args = parser.parse_args()
 
-    results = run_evaluation(top_k=args.top_k, use_judge=args.judge, retriever=args.retriever)
-    summarize(results, args.top_k, args.judge, args.retriever)
-    out_path = save_results(results, args.top_k, args.judge, args.retriever)
+    results = run_evaluation(top_k=args.top_k, use_judge=args.judge, retriever=args.retriever, translate=args.translate)
+    summarize(results, args.top_k, args.judge, args.retriever, args.translate)
+    out_path = save_results(results, args.top_k, args.judge, args.retriever, args.translate)
     print(f"Details saved to {out_path}")
 
 

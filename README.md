@@ -16,7 +16,7 @@ An AI advisor specialized in **US student visa work authorization (CPT / OPT / S
 
 Three problems a generic RAG chatbot cannot solve for immigration policy:
 
-1. **Cross-language retrieval** — The corpus is English official documentation; users ask in Chinese. The English-only embedding model must be replaced with a multilingual one (Phase 2).
+1. **Cross-language retrieval** — The corpus is English official documentation; users ask in Chinese. Instead of swapping in a multilingual embedding model, Chinese queries are translated to English before retrieval (Phase 2.1) — policy terms (OPT/CPT/SEVIS/I-20) translate with near-zero risk, and the proven index needs no migration.
 2. **Policy freshness** — Immigration rules change frequently. Every retrieved chunk carries `source_url` + `crawl_date` metadata, and answers surface "information as of {date}, refer to USCIS for the latest".
 3. **Compliance red line** — Answers must never pretend to be legal advice; out-of-domain questions are refused and redirected.
 
@@ -36,8 +36,8 @@ Three problems a generic RAG chatbot cannot solve for immigration policy:
 | Phase | Scope | Status |
 |---|---|---|
 | 0 | Project initialization (new repo, baseline commit) | ✅ Done |
-| 1 | Policy corpus pipeline (crawler + metadata ingestion) | 🔄 In progress |
-| 2 | Vertical RAG: multilingual embeddings, citations, refusal, policy eval set | ⏳ Planned |
+| 1 | Policy corpus pipeline (crawler + metadata ingestion) | ✅ Done |
+| 2 | Vertical RAG: query translation, citations, refusal, policy eval set | 🔄 In progress (2.1 translation + 2.2 citations done) |
 | 3 | Productization: SQLite persistence, auth, rate limiting | ⏳ Planned |
 | 4 | Deployment: Render + CI/CD + monitoring | ⏳ Planned |
 | 5 | Compliance & operations (ongoing) | ⏳ Planned |
@@ -51,11 +51,11 @@ Three problems a generic RAG chatbot cannot solve for immigration policy:
 - A DeepSeek API key (get one at [platform.deepseek.com](https://platform.deepseek.com))
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/vebbbdg/policy-advisor.git
 cd policy-advisor
 
-conda create -n langchain1.2 python=3.11
-conda activate langchain1.2
+conda create -n policy-advisor python=3.11
+conda activate policy-advisor
 pip install -r requirements.txt
 
 cp .env.example .env   # add your DEEPSEEK_API_KEY
@@ -97,7 +97,7 @@ policy-advisor/
 
 ## 🧪 Evaluation
 
-The project ships a self-contained evaluation framework (`eval/`) measuring retrieval and generation quality separately, on an isolated vector store. Improvements are accepted or rejected by data, not intuition — this methodology will gate every Phase 2 change (e.g., the multilingual embedding model switch).
+The project ships a self-contained evaluation framework (`eval/`) measuring retrieval and generation quality separately, on an isolated vector store. Improvements are accepted or rejected by data, not intuition — this methodology gates every Phase 2 change (e.g., the query-translation approach is validated against a Chinese policy QA set before any multilingual embedding switch would even be considered).
 
 ```bash
 # Retrieval metrics only (no API cost)
