@@ -26,6 +26,7 @@ from core.memory import keep_recent_messages, inject_rag_prompt
 from core.session import session_manager
 from core.rag import rag_engine, translate_query, UPLOAD_DIR
 from core.uploads import validate_upload, safe_stored_name, MAX_UPLOAD_BYTES
+from core.usage import usage_tracker
 from core.logger import logger
 
 # ====================== 应用初始化 ======================
@@ -171,8 +172,12 @@ async def chat_stream(request: Request, data: ChatInput):
 
         def stream_generator():
             full_reply = ""
+            usage = None
             try:
                 for chunk in model.stream(optimized_msgs):
+                    # 阶段 3.3-C：流式最后一个 chunk 携带 usage_metadata（需 model 开启 stream_usage）
+                    if getattr(chunk, "usage_metadata", None):
+                        usage = chunk.usage_metadata
                     if chunk.content:
                         full_reply += chunk.content
                         # SSE格式：JSON数据包含内容和session_id
@@ -187,6 +192,8 @@ async def chat_stream(request: Request, data: ChatInput):
                 yield f"data: {json.dumps({'done': True, 'session_id': session_id, 'citations': citations})}\n\n"
                 # 保存AI回复
                 session_manager.add_message(session_id, "assistant", full_reply)
+                # 阶段 3.3-C：累计本次对话的 token 消耗（超日预算会告警，仅告警不拦截）
+                usage_tracker.record(usage)
                 logger.info(f"Session {session_id}: response completed ({len(full_reply)} chars)")
 
             except Exception as e:
@@ -270,7 +277,9 @@ async def health():
         "status": "healthy",
         "version": "2.0.0",
         "rag_enabled": RAG_ENABLED,
-        "document_chunks": rag_engine.get_document_count()
+        "document_chunks": rag_engine.get_document_count(),
+        # 阶段 3.3-C：当日 LLM token 用量（可观测；超日预算在日志告警，不拦截请求）
+        "llm_usage_today": usage_tracker.snapshot()
     }
 
 

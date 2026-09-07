@@ -37,7 +37,7 @@ RERANKER_MODEL_ID = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
 
 def init_llm_model():
-    """初始化LLM对话模型（流式输出）"""
+    """初始化LLM对话模型（流式输出；开启 stream_usage 以返回 token 用量供成本追踪）"""
     api_key = os.getenv("DEEPSEEK_API_KEY")
     base_url = os.getenv("DEEPSEEK_BASE_URL")
 
@@ -48,6 +48,8 @@ def init_llm_model():
         base_url=base_url,
         streaming=True,
         temperature=0.7,
+        # 阶段 3.3-C：开启流式用量返回，最后一个 chunk 携带 usage_metadata 供成本追踪
+        stream_usage=True,
     )
     return model
 

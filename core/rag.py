@@ -19,6 +19,7 @@ from langchain_core.documents import Document
 from core.model import init_embeddings, init_reranker
 from core.retrieval import tokenize, rrf_fuse, top_by_scores
 from core.logger import logger
+from core.usage import usage_tracker
 
 
 # 查询翻译专用 LLM 客户端（懒加载，未翻译过中文时零开销；无状态 HTTP 客户端，与对话模型互不影响）
@@ -54,6 +55,8 @@ def translate_query(text: str) -> str:
             ),
             HumanMessage(text),
         ])
+        # 阶段 3.3-C：翻译也是一次 DeepSeek 调用，计入当日 token 消耗（仅告警不拦截）
+        usage_tracker.record(getattr(reply, "usage_metadata", None))
         translated = (reply.content or "").strip().strip('"').strip("'")
         if not translated:
             logger.warning("Query translation returned empty, using original query")
