@@ -1,14 +1,17 @@
 """
-多会话管理器
+多会话管理器（阶段 3.1：SQLite 持久化）
 - 支持创建多个独立对话
 - 每个会话有自己的消息历史
 - 类似ChatGPT左侧会话列表功能
-- 内存存储，重启服务会清空（生产环境可换Redis/SQLite）
+- 存储落盘到 SQLite（默认 data/app.db），重启服务不再丢失；表结构见 core/db.py
 """
 import threading
 import uuid
-from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List
+
+from sqlmodel import Session, select
+
+from core.db import DEFAULT_DB_URL, MessageRecord, SessionRecord, make_engine
 
 
 # 阶段 2.3：政策顾问人设 + 域外拒答 + 固定免责声明
@@ -39,88 +42,115 @@ SYSTEM_PROMPT = (
 
 
 class SessionManager:
-    """会话管理器：管理多个独立对话"""
+    """会话管理器：管理多个独立对话（持久化到 SQLite）"""
 
-    def __init__(self):
-        # session_id -> {"messages": [...], "created_at": ..., "title": ..., "seq": ...}
-        self._sessions: Dict[str, Dict] = {}
-        # 单调递增序号：作为"最新在前"排序的依据，不受系统时钟精度影响
-        # （快速连续创建的会话可能拿到相同的 datetime.now()，仅靠时间戳排序会退化成插入顺序）
-        self._counter = 0
-        # 保护会话字典的并发读写（FastAPI线程池 + async事件循环混合访问）
+    def __init__(self, db_url: str = DEFAULT_DB_URL):
+        # db_url：默认生产文件库 data/app.db；测试可传 sqlite:///:memory: 得到隔离库
+        self.engine = make_engine(db_url)
+        # 保护"读取当前最大 seq → 写入新会话"这段临界区，
+        # 避免并发下两个会话抢到相同 seq（seq 是"最新在前"排序的唯一依据）
         self._lock = threading.Lock()
 
     def create_session(self, title: str = "New Chat") -> str:
-        """创建新会话，返回session_id"""
-        # 完整uuid4，避免截断后的碰撞与可枚举风险
+        """创建新会话，返回 session_id"""
+        # 完整 uuid4，避免截断后的碰撞与可枚举风险
         session_id = str(uuid.uuid4())
         with self._lock:
-            self._counter += 1
-            self._sessions[session_id] = {
-                "messages": [
-                    {"role": "system", "content": SYSTEM_PROMPT}
-                ],
-                "created_at": datetime.now().isoformat(),
-                "title": title,
-                "seq": self._counter,
-            }
+            with Session(self.engine) as db:
+                db.add(SessionRecord(
+                    id=session_id, title=title, seq=self._next_seq(db)
+                ))
+                # 每个新会话的第一条消息永远是 system 人设提示词
+                db.add(MessageRecord(
+                    session_id=session_id, role="system", content=SYSTEM_PROMPT
+                ))
+                db.commit()
         return session_id
 
     def get_messages(self, session_id: str) -> List[Dict]:
-        """获取指定会话的消息历史"""
-        with self._lock:
-            if session_id not in self._sessions:
+        """获取指定会话的消息历史（按插入顺序，system 永远在最前）"""
+        with Session(self.engine) as db:
+            if db.get(SessionRecord, session_id) is None:
                 return []
-            return self._sessions[session_id]["messages"]
+            rows = db.exec(
+                select(MessageRecord)
+                .where(MessageRecord.session_id == session_id)
+                .order_by(MessageRecord.id)
+            ).all()
+            return [{"role": r.role, "content": r.content} for r in rows]
 
     def add_message(self, session_id: str, role: str, content: str):
-        """向指定会话添加消息"""
+        """向指定会话追加一条消息"""
         with self._lock:
-            if session_id not in self._sessions:
-                return
-            self._sessions[session_id]["messages"].append({
-                "role": role,
-                "content": content
-            })
-            # 自动用第一条用户消息作为会话标题
-            if role == "user" and self._sessions[session_id]["title"] == "New Chat":
-                self._sessions[session_id]["title"] = content[:30] + ("..." if len(content) > 30 else "")
+            with Session(self.engine) as db:
+                record = db.get(SessionRecord, session_id)
+                if record is None:
+                    return
+                db.add(MessageRecord(
+                    session_id=session_id, role=role, content=content
+                ))
+                # 自动用第一条用户消息作为会话标题
+                if role == "user" and record.title == "New Chat":
+                    record.title = content[:30] + ("..." if len(content) > 30 else "")
+                    db.add(record)
+                db.commit()
 
     def reset_session(self, session_id: str):
-        """重置指定会话"""
+        """重置指定会话：清空历史消息，仅保留 system 人设提示词（标题不变）"""
         with self._lock:
-            if session_id in self._sessions:
-                self._sessions[session_id]["messages"] = [
-                    {"role": "system", "content": SYSTEM_PROMPT}
-                ]
+            with Session(self.engine) as db:
+                if db.get(SessionRecord, session_id) is None:
+                    return
+                self._delete_messages(db, session_id)
+                db.add(MessageRecord(
+                    session_id=session_id, role="system", content=SYSTEM_PROMPT
+                ))
+                db.commit()
 
     def delete_session(self, session_id: str):
-        """删除指定会话"""
+        """删除指定会话及其全部消息"""
         with self._lock:
-            if session_id in self._sessions:
-                del self._sessions[session_id]
+            with Session(self.engine) as db:
+                record = db.get(SessionRecord, session_id)
+                if record is None:
+                    return
+                self._delete_messages(db, session_id)
+                db.delete(record)
+                db.commit()
 
     def list_sessions(self) -> List[Dict]:
         """列出所有会话（用于左侧边栏），最新创建的排在最前"""
-        with self._lock:
-            # 按单调递增序号倒序：seq 越大越新，稳定可靠，不受系统时钟精度影响
-            ordered = sorted(
-                self._sessions.items(), key=lambda kv: kv[1]["seq"], reverse=True
-            )
+        with Session(self.engine) as db:
+            # 按单调递增 seq 倒序：seq 越大越新，稳定可靠，不受系统时钟精度影响
+            rows = db.exec(
+                select(SessionRecord).order_by(SessionRecord.seq.desc())
+            ).all()
             return [
-                {
-                    "id": sid,
-                    "title": data["title"],
-                    "created_at": data["created_at"],
-                }
-                for sid, data in ordered
+                {"id": r.id, "title": r.title, "created_at": r.created_at}
+                for r in rows
             ]
 
     def session_exists(self, session_id: str) -> bool:
         """检查会话是否存在"""
-        with self._lock:
-            return session_id in self._sessions
+        with Session(self.engine) as db:
+            return db.get(SessionRecord, session_id) is not None
+
+    def _next_seq(self, db: Session) -> int:
+        """取当前最大 seq + 1（须在 self._lock 内、同一个 db 会话中调用）"""
+        last = db.exec(
+            select(SessionRecord).order_by(SessionRecord.seq.desc())
+        ).first()
+        return (last.seq + 1) if last else 1
+
+    @staticmethod
+    def _delete_messages(db: Session, session_id: str):
+        """删除某会话的全部消息（内部工具，须在已开启的 db 会话内调用）"""
+        rows = db.exec(
+            select(MessageRecord).where(MessageRecord.session_id == session_id)
+        ).all()
+        for r in rows:
+            db.delete(r)
 
 
-# 全局单例
+# 全局单例：使用生产文件库 data/app.db（导入时自动建目录与表）
 session_manager = SessionManager()

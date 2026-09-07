@@ -12,7 +12,8 @@ class TestSessionManager:
     """Test suite for SessionManager."""
 
     def setup_method(self):
-        self.sm = SessionManager()
+        # 每个测试用独立的内存库：互不干扰，也不碰生产 data/app.db
+        self.sm = SessionManager("sqlite:///:memory:")
 
     def test_create_session(self):
         sid = self.sm.create_session()
@@ -68,6 +69,25 @@ class TestSessionManager:
 
     def test_get_nonexistent_session(self):
         assert self.sm.get_messages("nonexistent") == []
+
+    def test_persistence_across_instances(self, tmp_path):
+        """阶段 3.1 核心：数据落盘后，新建实例（模拟服务重启）仍能读到"""
+        db_url = f"sqlite:///{tmp_path / 'persist.db'}"
+
+        # 第一个实例：写入数据后释放文件句柄（Windows 上 tmp_path 自动清理需要）
+        sm1 = SessionManager(db_url)
+        sid = sm1.create_session("Persisted")
+        sm1.add_message(sid, "user", "hello")
+        sm1.engine.dispose()
+
+        # 第二个实例：全新对象、同一个库文件 —— 模拟重启
+        sm2 = SessionManager(db_url)
+        assert sm2.session_exists(sid), "重启后会话丢失"
+        msgs = sm2.get_messages(sid)
+        assert len(msgs) == 2, "重启后消息丢失（应剩 system + user）"
+        assert msgs[1]["content"] == "hello"
+        assert sm2.list_sessions()[0]["title"] == "Persisted"
+        sm2.engine.dispose()
 
 
 if __name__ == "__main__":

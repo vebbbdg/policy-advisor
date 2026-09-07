@@ -24,7 +24,7 @@ class TestRAGPromptInjection:
 
     def test_multi_turn_rag_keeps_system_prompt_constant(self):
         """Simulate 5 RAG turns; stored system prompt length must never change."""
-        sm = SessionManager()
+        sm = SessionManager("sqlite:///:memory:")
         sid = sm.create_session()
         baseline_len = len(SYSTEM_PROMPT)
 
