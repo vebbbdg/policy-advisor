@@ -42,8 +42,11 @@ class SessionManager:
     """会话管理器：管理多个独立对话"""
 
     def __init__(self):
-        # session_id -> {"messages": [...], "created_at": ..., "title": ...}
+        # session_id -> {"messages": [...], "created_at": ..., "title": ..., "seq": ...}
         self._sessions: Dict[str, Dict] = {}
+        # 单调递增序号：作为"最新在前"排序的依据，不受系统时钟精度影响
+        # （快速连续创建的会话可能拿到相同的 datetime.now()，仅靠时间戳排序会退化成插入顺序）
+        self._counter = 0
         # 保护会话字典的并发读写（FastAPI线程池 + async事件循环混合访问）
         self._lock = threading.Lock()
 
@@ -52,12 +55,14 @@ class SessionManager:
         # 完整uuid4，避免截断后的碰撞与可枚举风险
         session_id = str(uuid.uuid4())
         with self._lock:
+            self._counter += 1
             self._sessions[session_id] = {
                 "messages": [
                     {"role": "system", "content": SYSTEM_PROMPT}
                 ],
                 "created_at": datetime.now().isoformat(),
                 "title": title,
+                "seq": self._counter,
             }
         return session_id
 
@@ -96,18 +101,20 @@ class SessionManager:
                 del self._sessions[session_id]
 
     def list_sessions(self) -> List[Dict]:
-        """列出所有会话（用于左侧边栏）"""
-        result = []
+        """列出所有会话（用于左侧边栏），最新创建的排在最前"""
         with self._lock:
-            for sid, data in self._sessions.items():
-                result.append({
+            # 按单调递增序号倒序：seq 越大越新，稳定可靠，不受系统时钟精度影响
+            ordered = sorted(
+                self._sessions.items(), key=lambda kv: kv[1]["seq"], reverse=True
+            )
+            return [
+                {
                     "id": sid,
                     "title": data["title"],
                     "created_at": data["created_at"],
-                })
-        # 按创建时间倒序
-        result.sort(key=lambda x: x["created_at"], reverse=True)
-        return result
+                }
+                for sid, data in ordered
+            ]
 
     def session_exists(self, session_id: str) -> bool:
         """检查会话是否存在"""
