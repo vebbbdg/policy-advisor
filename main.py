@@ -12,11 +12,14 @@ import json
 import os
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import StreamingResponse, FileResponse, JSONResponse
 from pydantic import BaseModel
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 from core.model import init_llm_model
 from core.memory import keep_recent_messages, inject_rag_prompt
@@ -43,9 +46,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ====================== 速率限制（阶段 3.3-B）======================
+# 按客户端 IP 限流：3.2 认证落地后可升级为按用户限流。
+# 唯一花钱的是 DeepSeek LLM 调用（chat-stream），故限额精准打在该端点。
+# 部署到反向代理（阶段 4 Render）后需改为信任 X-Forwarded-For，否则拿到的都是代理 IP。
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # 全局配置
 MAX_HISTORY_PAIRS = 15
 RAG_ENABLED = True
+# 每个 IP 每小时可调用 chat-stream 的次数（防 API 费用烧穿），可用环境变量覆盖
+CHAT_RATE_LIMIT = os.getenv("CHAT_RATE_LIMIT", "20/hour")
 model = init_llm_model()
 
 # 静态文件
@@ -102,8 +115,9 @@ async def reset_session(session_id: str):
 
 # ====================== 核心对话 API ======================
 @app.post("/api/chat-stream")
-async def chat_stream(data: ChatInput):
-    """SSE流式对话接口（支持RAG增强）"""
+@limiter.limit(CHAT_RATE_LIMIT)
+async def chat_stream(request: Request, data: ChatInput):
+    """SSE流式对话接口（支持RAG增强）；每 IP 每小时限 CHAT_RATE_LIMIT 次"""
     # 获取或创建会话
     session_id = data.session_id
     if not session_id or not session_manager.session_exists(session_id):
