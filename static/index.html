@@ -431,6 +431,65 @@
             .suggestion-grid { grid-template-columns: 1fr; }
         }
 
+        /* ===== Login modal (phase 3.2) ===== */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 28px;
+            width: 90%;
+            max-width: 380px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+        .modal-card h3 { font-size: 20px; margin-bottom: 8px; }
+        .modal-desc { font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 20px; }
+        .modal-input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 15px;
+            font-family: inherit;
+            outline: none;
+            margin-bottom: 12px;
+        }
+        .modal-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+        .modal-primary {
+            width: 100%;
+            padding: 12px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            margin-bottom: 8px;
+            transition: background 0.2s;
+        }
+        .modal-primary:hover { background: var(--accent-hover); }
+        .modal-secondary {
+            width: 100%;
+            padding: 10px;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .modal-secondary:hover { color: var(--text-primary); }
+        .modal-note { font-size: 11px; color: #94a3b8; line-height: 1.5; margin-top: 12px; }
+
         /* Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -515,6 +574,18 @@
         </div>
     </main>
 
+    <!-- Login modal (phase 3.2): shown when a guest hits the 5-message limit -->
+    <div class="modal-overlay" id="loginModal">
+        <div class="modal-card">
+            <h3>登录后继续</h3>
+            <p class="modal-desc">访客额度已用完（5 条消息）。输入邮箱即可免费继续，新会话将保存到你的账号。</p>
+            <input type="email" id="loginEmail" class="modal-input" placeholder="you@example.com">
+            <button class="modal-primary" onclick="doLogin()">登录 / 注册</button>
+            <button class="modal-secondary" onclick="hideLoginModal()">稍后再说</button>
+            <p class="modal-note">MVP 占位登录：仅需邮箱，无需密码；后续接入邮箱验证码 / Google 登录。</p>
+        </div>
+    </div>
+
     <script>
         // ===== State =====
         let currentSessionId = null;
@@ -530,13 +601,87 @@
             breaks: true
         });
 
-        // ===== Init =====
-        loadSessions();
-        updateRAGStatus();
+        // ===== Auth (phase 3.2): token flow + guest limit =====
+        const TOKEN_KEY = 'pa_token';
+        const GUEST_KEY = 'pa_is_guest';
+
+        function getToken() { return localStorage.getItem(TOKEN_KEY); }
+
+        // Merge Authorization: Bearer <token> into any headers.
+        // FormData-safe: never sets Content-Type (the browser must add the multipart boundary).
+        function authHeaders(extra = {}) {
+            const t = getToken();
+            return t ? { ...extra, Authorization: 'Bearer ' + t } : { ...extra };
+        }
+
+        // First visit (no stored token) -> fetch a guest token; return visits reuse the stored one.
+        async function ensureToken() {
+            if (getToken()) return;
+            const res = await fetch('/api/auth/guest', { method: 'POST' });
+            const data = await res.json();
+            localStorage.setItem(TOKEN_KEY, data.token);
+            localStorage.setItem(GUEST_KEY, String(data.is_guest));
+        }
+
+        // 401 (expired/invalid token) -> drop it and get a fresh guest token.
+        async function resetToGuest() {
+            localStorage.removeItem(TOKEN_KEY);
+            localStorage.removeItem(GUEST_KEY);
+            await ensureToken();
+        }
+
+        // fetch() wrapper: injects Authorization and retries once on 401.
+        async function authFetch(url, opts = {}) {
+            opts.headers = authHeaders(opts.headers);
+            let res = await fetch(url, opts);
+            if (res.status === 401) {
+                await resetToGuest();
+                opts.headers = authHeaders(opts.headers);
+                res = await fetch(url, opts);
+            }
+            return res;
+        }
+
+        // ===== Login modal (phase 3.2): guest hit the 5-message limit =====
+        function showLoginModal() {
+            document.getElementById('loginModal').classList.add('open');
+            setTimeout(() => document.getElementById('loginEmail').focus(), 50);
+        }
+        function hideLoginModal() {
+            document.getElementById('loginModal').classList.remove('open');
+        }
+        // Placeholder login: email only, no password/verification (see core/auth.py TODO).
+        async function doLogin() {
+            const email = document.getElementById('loginEmail').value.trim();
+            if (!email || !email.includes('@')) { alert('请输入有效的邮箱地址'); return; }
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+                if (!res.ok) { alert('登录失败：HTTP ' + res.status); return; }
+                const data = await res.json();
+                localStorage.setItem(TOKEN_KEY, data.token);
+                localStorage.setItem(GUEST_KEY, String(data.is_guest));
+                hideLoginModal();
+                currentSessionId = null;
+                newChat();   // refresh the session list under the new account
+            } catch (e) {
+                alert('登录出错：' + e.message);
+            }
+        }
+
+        // ===== Init (phase 3.2: get a token BEFORE any authed call) =====
+        (async () => {
+            await ensureToken();
+            loadSessions();
+            updateRAGStatus();
+        })();
 
         // ===== Session Management =====
         async function loadSessions() {
-            const res = await fetch('/api/sessions');
+            const res = await authFetch('/api/sessions');
             const data = await res.json();
             const list = document.getElementById('sessionList');
             list.innerHTML = '';
@@ -594,7 +739,7 @@
 
         async function deleteSession(id, event) {
             event.stopPropagation();
-            await fetch(`/api/sessions/${id}`, { method: 'DELETE' });
+            await authFetch(`/api/sessions/${id}`, { method: 'DELETE' });
             if (id === currentSessionId) newChat();
             else loadSessions();
         }
@@ -625,7 +770,7 @@
             btn.style.pointerEvents = 'none';
 
             try {
-                const res = await fetch('/api/documents/upload', { method: 'POST', body: formData });
+                const res = await authFetch('/api/documents/upload', { method: 'POST', body: formData });
                 const data = await res.json();
                 if (data.status === 'success') {
                     alert(`✅ Document uploaded!\nIndexed ${data.chunks} chunks. Total: ${data.total_chunks}`);
@@ -681,11 +826,24 @@
             contentEl.classList.add('typing-cursor');
 
             try {
-                const res = await fetch('/api/chat-stream', {
+                const res = await authFetch('/api/chat-stream', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ message: text, session_id: currentSessionId, use_rag: useRAG })
                 });
+
+                // 阶段 3.2：访客额度用尽 -> 403 -> 弹登录框（此时 body 是 JSON 错误，不能读流）
+                if (res.status === 403) {
+                    contentEl.classList.remove('typing-cursor');
+                    contentEl.innerHTML = '<span style="color:#6e6e80">访客额度已用完（5 条消息），请登录后继续 👉</span>';
+                    showLoginModal();
+                    return;
+                }
+                if (!res.ok) {
+                    contentEl.classList.remove('typing-cursor');
+                    contentEl.innerHTML = `<span style="color:#ef4444">请求失败（HTTP ${res.status}）</span>`;
+                    return;
+                }
 
                 const reader = res.body.getReader();
                 const decoder = new TextDecoder();

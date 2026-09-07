@@ -40,8 +40,16 @@ def client(monkeypatch):
     return TestClient(main.app)
 
 
-def test_chat_stream_rate_limit(client):
-    """连发 limit+1 次：前 limit 次放行(200)，第 limit+1 次被限流(429)"""
+@pytest.fixture
+def auth_headers():
+    """非访客 token：避开访客 5 条配额，纯粋测速率限制（否则第 6 条就撞配额而非第 21 条撞限流）"""
+    from core.auth import issue_login_token
+    token, _ = issue_login_token("ratelimit@test.com")
+    return {"Authorization": f"Bearer {token}"}
+
+
+def test_chat_stream_rate_limit(client, auth_headers):
+    """连发 limit+1 次（带非访客 token）：前 limit 次放行(200)，第 limit+1 次被限流(429)"""
     import main
 
     # 从配置解析限额，避免把 20 写死（默认 CHAT_RATE_LIMIT="20/hour"）
@@ -49,8 +57,8 @@ def test_chat_stream_rate_limit(client):
     payload = {"message": "hi", "use_rag": False}
 
     for i in range(limit):
-        resp = client.post("/api/chat-stream", json=payload)
+        resp = client.post("/api/chat-stream", json=payload, headers=auth_headers)
         assert resp.status_code == 200, f"第 {i + 1} 次应放行，实际 {resp.status_code}"
 
-    blocked = client.post("/api/chat-stream", json=payload)
+    blocked = client.post("/api/chat-stream", json=payload, headers=auth_headers)
     assert blocked.status_code == 429, f"第 {limit + 1} 次应被限流，实际 {blocked.status_code}"

@@ -9,7 +9,7 @@ import threading
 import uuid
 from typing import Dict, List
 
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from core.db import DEFAULT_DB_URL, MessageRecord, SessionRecord, make_engine
 
@@ -51,14 +51,14 @@ class SessionManager:
         # 避免并发下两个会话抢到相同 seq（seq 是"最新在前"排序的唯一依据）
         self._lock = threading.Lock()
 
-    def create_session(self, title: str = "New Chat") -> str:
-        """创建新会话，返回 session_id"""
+    def create_session(self, title: str = "New Chat", user_id: str | None = None) -> str:
+        """创建新会话，返回 session_id；user_id 标记归属（阶段 3.2 会话隔离）"""
         # 完整 uuid4，避免截断后的碰撞与可枚举风险
         session_id = str(uuid.uuid4())
         with self._lock:
             with Session(self.engine) as db:
                 db.add(SessionRecord(
-                    id=session_id, title=title, seq=self._next_seq(db)
+                    id=session_id, title=title, seq=self._next_seq(db), user_id=user_id
                 ))
                 # 每个新会话的第一条消息永远是 system 人设提示词
                 db.add(MessageRecord(
@@ -118,12 +118,18 @@ class SessionManager:
                 db.delete(record)
                 db.commit()
 
-    def list_sessions(self) -> List[Dict]:
-        """列出所有会话（用于左侧边栏），最新创建的排在最前"""
+    def list_sessions(self, user_id: str | None = None) -> List[Dict]:
+        """
+        列出会话（用于左侧边栏），最新创建的排在最前。
+        阶段 3.2：按 user_id 过滤，只返回归属该用户的会话（会话隔离）；
+        user_id=None 匹配 user_id IS NULL 那一组（向后兼容未传用户的旧调用/测试）。
+        """
         with Session(self.engine) as db:
             # 按单调递增 seq 倒序：seq 越大越新，稳定可靠，不受系统时钟精度影响
             rows = db.exec(
-                select(SessionRecord).order_by(SessionRecord.seq.desc())
+                select(SessionRecord)
+                .where(SessionRecord.user_id == user_id)
+                .order_by(SessionRecord.seq.desc())
             ).all()
             return [
                 {"id": r.id, "title": r.title, "created_at": r.created_at}
@@ -134,6 +140,35 @@ class SessionManager:
         """检查会话是否存在"""
         with Session(self.engine) as db:
             return db.get(SessionRecord, session_id) is not None
+
+    def owns_session(self, session_id: str, user_id: str | None) -> bool:
+        """
+        校验会话是否归属指定用户（阶段 3.2 越权防护）。
+        会话不存在 → False；存在但归属不符 → False。main.py 用它拦截操作他人会话。
+        """
+        with Session(self.engine) as db:
+            record = db.get(SessionRecord, session_id)
+            return record is not None and record.user_id == user_id
+
+    def count_user_messages(self, user_id: str) -> int:
+        """
+        统计某用户发出的消息条数（role='user'），跨其所有会话累计。
+        供访客配额判断（阶段 3.2）：访客发满 GUEST_MESSAGE_LIMIT 条即拦截。
+        """
+        with Session(self.engine) as db:
+            # 先取该用户的全部会话 id，再数这些会话里的 user 消息
+            session_ids = db.exec(
+                select(SessionRecord.id).where(SessionRecord.user_id == user_id)
+            ).all()
+            if not session_ids:
+                return 0
+            rows = db.exec(
+                select(MessageRecord.id).where(
+                    MessageRecord.role == "user",
+                    col(MessageRecord.session_id).in_(session_ids),
+                )
+            ).all()
+            return len(rows)
 
     def _next_seq(self, db: Session) -> int:
         """取当前最大 seq + 1（须在 self._lock 内、同一个 db 会话中调用）"""

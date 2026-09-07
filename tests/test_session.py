@@ -89,6 +89,40 @@ class TestSessionManager:
         assert sm2.list_sessions()[0]["title"] == "Persisted"
         sm2.engine.dispose()
 
+    def test_session_isolation_by_user(self):
+        """阶段 3.2：list_sessions 只返回归属该 user_id 的会话"""
+        a1 = self.sm.create_session("A1", user_id="alice")
+        a2 = self.sm.create_session("A2", user_id="alice")
+        b1 = self.sm.create_session("B1", user_id="bob")
+
+        alice_sessions = self.sm.list_sessions(user_id="alice")
+        bob_sessions = self.sm.list_sessions(user_id="bob")
+
+        assert {s["id"] for s in alice_sessions} == {a1, a2}
+        assert {s["id"] for s in bob_sessions} == {b1}
+        # 未传 user_id → None 组，看不到 alice/bob 的会话
+        assert self.sm.list_sessions() == []
+
+    def test_owns_session(self):
+        """阶段 3.2：归属校验，拦截越权操作他人会话"""
+        sid = self.sm.create_session("Owned", user_id="alice")
+        assert self.sm.owns_session(sid, "alice") is True
+        assert self.sm.owns_session(sid, "bob") is False
+        assert self.sm.owns_session("nonexistent", "alice") is False
+
+    def test_count_user_messages(self):
+        """阶段 3.2：跨会话累计某用户的 user 消息数（访客配额依据）"""
+        s1 = self.sm.create_session(user_id="guest-1")
+        s2 = self.sm.create_session(user_id="guest-1")
+        self.sm.add_message(s1, "user", "q1")
+        self.sm.add_message(s1, "assistant", "a1")   # 非 user，不计
+        self.sm.add_message(s1, "user", "q2")
+        self.sm.add_message(s2, "user", "q3")
+        # 只数 role='user'：q1, q2, q3 = 3 条（system/assistant 不计）
+        assert self.sm.count_user_messages("guest-1") == 3
+        # 另一个用户没有消息
+        assert self.sm.count_user_messages("guest-2") == 0
+
 
 if __name__ == "__main__":
     import pytest

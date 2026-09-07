@@ -12,7 +12,7 @@ import json
 import os
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import StreamingResponse, FileResponse, JSONResponse
@@ -27,6 +27,7 @@ from core.session import session_manager
 from core.rag import rag_engine, translate_query, UPLOAD_DIR
 from core.uploads import validate_upload, safe_stored_name, MAX_UPLOAD_BYTES
 from core.usage import usage_tracker
+from core.auth import UserContext, get_current_user, issue_guest_token, issue_login_token
 from core.logger import logger
 
 # ====================== 应用初始化 ======================
@@ -60,6 +61,8 @@ MAX_HISTORY_PAIRS = 15
 RAG_ENABLED = True
 # 每个 IP 每小时可调用 chat-stream 的次数（防 API 费用烧穿），可用环境变量覆盖
 CHAT_RATE_LIMIT = os.getenv("CHAT_RATE_LIMIT", "20/hour")
+# 访客（未登录）最多可发送的消息条数，用尽后引导登录（阶段 3.2 获客转化）
+GUEST_MESSAGE_LIMIT = int(os.getenv("GUEST_MESSAGE_LIMIT", "5") or 5)
 model = init_llm_model()
 
 # 静态文件
@@ -77,39 +80,72 @@ class CreateSessionInput(BaseModel):
     title: str = "New Chat"
 
 
+class LoginInput(BaseModel):
+    email: str
+
+
 # ====================== 页面路由 ======================
 @app.get("/")
 async def index():
     return FileResponse("static/index.html")
 
 
+# ====================== 认证 API（阶段 3.2，公开端点，无需 token）======================
+@app.post("/api/auth/guest")
+async def auth_guest():
+    """领取访客 token：前端首次访问调用，可发 GUEST_MESSAGE_LIMIT 条消息，用尽引导登录"""
+    token, user_id = issue_guest_token()
+    return {
+        "token": token, "user_id": user_id, "is_guest": True,
+        "message_limit": GUEST_MESSAGE_LIMIT,
+    }
+
+
+@app.post("/api/auth/login")
+async def auth_login(data: LoginInput):
+    """
+    【占位登录】接受邮箱即签发非访客 token。
+    TODO(阶段 3.2 完整实现)：接入邮箱验证码 / Google OAuth 时，在此加凭据校验后再签发。
+    """
+    email = (data.email or "").strip()
+    if not email or "@" not in email:
+        raise HTTPException(400, "a valid email is required")
+    token, user_id = issue_login_token(email)
+    logger.info(f"Placeholder login: {user_id}")
+    return {"token": token, "user_id": user_id, "is_guest": False}
+
+
 # ====================== 会话管理 API ======================
 @app.post("/api/sessions")
-async def create_session(data: CreateSessionInput):
-    """创建新会话"""
-    session_id = session_manager.create_session(data.title)
-    logger.info(f"New session created: {session_id}")
+async def create_session(data: CreateSessionInput, user: UserContext = Depends(get_current_user)):
+    """创建新会话（归属当前用户）"""
+    session_id = session_manager.create_session(data.title, user_id=user.user_id)
+    logger.info(f"New session created: {session_id} (user={user.user_id})")
     return {"session_id": session_id, "title": data.title}
 
 
 @app.get("/api/sessions")
-async def list_sessions():
-    """获取所有会话列表（左侧边栏）"""
-    sessions = session_manager.list_sessions()
+async def list_sessions(user: UserContext = Depends(get_current_user)):
+    """获取当前用户的会话列表（左侧边栏，按 user_id 隔离）"""
+    sessions = session_manager.list_sessions(user_id=user.user_id)
     return {"sessions": sessions}
 
 
 @app.delete("/api/sessions/{session_id}")
-async def delete_session(session_id: str):
-    """删除指定会话"""
+async def delete_session(session_id: str, user: UserContext = Depends(get_current_user)):
+    """删除指定会话（仅限本人；越权/不存在一律 404，不泄露他人会话是否存在）"""
+    if not session_manager.owns_session(session_id, user.user_id):
+        raise HTTPException(404, "session not found")
     session_manager.delete_session(session_id)
     logger.info(f"Session deleted: {session_id}")
     return {"status": "success"}
 
 
 @app.post("/api/sessions/{session_id}/reset")
-async def reset_session(session_id: str):
-    """重置指定会话对话"""
+async def reset_session(session_id: str, user: UserContext = Depends(get_current_user)):
+    """重置指定会话对话（仅限本人会话）"""
+    if not session_manager.owns_session(session_id, user.user_id):
+        raise HTTPException(404, "session not found")
     session_manager.reset_session(session_id)
     return {"status": "success"}
 
@@ -117,12 +153,19 @@ async def reset_session(session_id: str):
 # ====================== 核心对话 API ======================
 @app.post("/api/chat-stream")
 @limiter.limit(CHAT_RATE_LIMIT)
-async def chat_stream(request: Request, data: ChatInput):
-    """SSE流式对话接口（支持RAG增强）；每 IP 每小时限 CHAT_RATE_LIMIT 次"""
-    # 获取或创建会话
+async def chat_stream(request: Request, data: ChatInput, user: UserContext = Depends(get_current_user)):
+    """SSE流式对话接口（支持RAG增强）；需认证，每 IP 每小时限 CHAT_RATE_LIMIT 次"""
+    # 阶段 3.2：访客配额——发满 GUEST_MESSAGE_LIMIT 条即拒绝并引导登录（403，与限流 429 区分）
+    if user.is_guest and session_manager.count_user_messages(user.user_id) >= GUEST_MESSAGE_LIMIT:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Guest limit reached ({GUEST_MESSAGE_LIMIT} messages). Please log in to continue.",
+        )
+
+    # 获取或创建会话（校验归属，防越权访问他人会话；无有效归属则新建一个属于当前用户的会话）
     session_id = data.session_id
-    if not session_id or not session_manager.session_exists(session_id):
-        session_id = session_manager.create_session()
+    if not session_id or not session_manager.owns_session(session_id, user.user_id):
+        session_id = session_manager.create_session(user_id=user.user_id)
 
     try:
         # 1. 保存用户消息
