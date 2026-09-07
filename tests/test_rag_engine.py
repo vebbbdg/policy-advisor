@@ -50,3 +50,28 @@ def test_add_count_and_clear(engine, tmp_path):
     # 空库重复清空不应报错
     engine.clear_all()
     assert engine.get_document_count() == 0
+
+
+def test_retrieve_by_mode_routes(engine, monkeypatch):
+    """阶段 3.3-A：RETRIEVER_MODE 决定分派到哪种检索；默认 hybrid，未知值降级 hybrid"""
+    calls = []
+    monkeypatch.setattr(engine, "retrieve", lambda q, top_k=3: calls.append("dense") or [])
+    monkeypatch.setattr(engine, "retrieve_hybrid", lambda q, top_k=3, **kw: calls.append("hybrid") or [])
+    monkeypatch.setattr(engine, "retrieve_reranked", lambda q, top_k=3, **kw: calls.append("rerank") or [])
+
+    # 未设环境变量 → 默认 hybrid
+    monkeypatch.delenv("RETRIEVER_MODE", raising=False)
+    engine.retrieve_by_mode("q")
+    assert calls[-1] == "hybrid"
+
+    # 三种模式（含大小写与首尾空格）正确路由
+    for mode, expected in [("dense", "dense"), ("hybrid", "hybrid"),
+                           ("rerank", "rerank"), ("DENSE", "dense"), (" Hybrid ", "hybrid")]:
+        monkeypatch.setenv("RETRIEVER_MODE", mode)
+        engine.retrieve_by_mode("q")
+        assert calls[-1] == expected, f"RETRIEVER_MODE={mode!r} 应路由到 {expected}"
+
+    # 未知值 → 降级 hybrid（不因配置笔误中断）
+    monkeypatch.setenv("RETRIEVER_MODE", "bogus")
+    engine.retrieve_by_mode("q")
+    assert calls[-1] == "hybrid"

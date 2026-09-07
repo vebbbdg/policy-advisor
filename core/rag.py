@@ -212,6 +212,23 @@ class RAGEngine:
         scores = reranker.predict(pairs)
         return top_by_scores(candidates, list(scores), top_k)
 
+    def retrieve_by_mode(self, query: str, top_k: int = 3) -> List[Document]:
+        """
+        按 RETRIEVER_MODE 环境变量分派检索模式（阶段 3.3-A）：
+        - hybrid（默认）：BM25 + 向量 RRF 融合，评估 Recall@3=0.906 过验收线、无额外延迟
+        - rerank：hybrid 宽召回 + cross-encoder 精排，排序精度最高但 +0.5~1s 延迟
+        - dense：纯向量检索（最快，Recall@3=0.812）
+        未知值降级到 hybrid（生产默认）并记一条告警，绝不因配置笔误中断对话。
+        """
+        mode = os.getenv("RETRIEVER_MODE", "hybrid").strip().lower()
+        if mode == "dense":
+            return self.retrieve(query, top_k)
+        if mode == "rerank":
+            return self.retrieve_reranked(query, top_k)
+        if mode != "hybrid":
+            logger.warning(f"Unknown RETRIEVER_MODE={mode!r}, falling back to hybrid")
+        return self.retrieve_hybrid(query, top_k)
+
     def format_docs(self, docs: List[Document]) -> Optional[str]:
         """将检索结果格式化为上下文字符串"""
         if not docs:
