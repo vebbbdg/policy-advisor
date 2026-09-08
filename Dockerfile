@@ -11,6 +11,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Pre-download embedding + reranker models INTO the image so Render cold starts
+# load them offline (no HuggingFace network call at boot => faster, reliable).
+ENV HF_HOME=/app/.hf
+RUN python -c "from sentence_transformers import SentenceTransformer, CrossEncoder; \
+    SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2'); \
+    CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')"
+
 # Copy application
 COPY . .
 

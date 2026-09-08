@@ -11,6 +11,7 @@ SQLite 持久化层（SQLModel）——阶段 3.1
 - chat_session：一条 = 左侧边栏的一个对话
 - chat_message：一条 = 对话里的一句话（system / user / assistant）
 """
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -21,8 +22,8 @@ from sqlmodel import SQLModel, Field, create_engine
 
 # 生产环境默认的 SQLite 文件（与 data/vectordb、data/policy_corpus 同目录）。
 # 沿用项目的相对路径约定：从项目根目录启动服务。
-# 阶段 4 部署时，整个 data/ 目录会挂载到 Render 持久卷。
-DEFAULT_DB_URL = "sqlite:///data/app.db"
+# 阶段 4 部署：可用 DATABASE_URL 指到 Render 持久卷（如 sqlite:////var/data/app.db）。
+DEFAULT_DB_URL = os.getenv("DATABASE_URL", "sqlite:///data/app.db")
 
 
 class SessionRecord(SQLModel, table=True):

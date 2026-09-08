@@ -68,9 +68,9 @@ def translate_query(text: str) -> str:
         return text
 
 
-# 向量数据库持久化目录
-VECTOR_DB_PATH = Path("data/vectordb")
-UPLOAD_DIR = Path("data/uploads")
+# 向量数据库持久化目录（阶段 4：可用 CHROMA_DIR / UPLOAD_DIR 指到 Render 持久卷）
+VECTOR_DB_PATH = Path(os.getenv("CHROMA_DIR", "data/vectordb"))
+UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "data/uploads"))
 VECTOR_DB_PATH.mkdir(parents=True, exist_ok=True)
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 

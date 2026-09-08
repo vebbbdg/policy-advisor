@@ -1,0 +1,38 @@
+# Render Blueprint (phase 4.1) - free plan, NO persistent disk.
+#
+# The knowledge base self-heals: on boot, main.py indexes the in-image policy
+# corpus into Chroma whenever the vector store is empty, so RAG works even
+# though the free plan's filesystem is ephemeral. Sessions/uploads reset on
+# redeploy (acceptable for a portfolio demo). For true persistence, upgrade to
+# a paid plan and use the commented disk block below.
+services:
+  - type: web
+    name: policy-advisor
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      # Set this manually in the Render dashboard as a secret (your real key).
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      # Render generates a strong random JWT signing secret.
+      - key: JWT_SECRET
+        generateValue: true
+      - key: RETRIEVER_MODE
+        value: hybrid
+
+    # ---- Paid upgrade: persistent sessions / uploads / vector store ----
+    # 1) Change plan: free -> starter
+    # 2) Uncomment the disk and the three path envVars:
+    # disk:
+    #   name: data
+    #   mountPath: /var/data
+    #   sizeGB: 1
+    # envVars (add):
+    #   - key: DATABASE_URL
+    #     value: sqlite:////var/data/app.db
+    #   - key: CHROMA_DIR
+    #     value: /var/data/vectordb
+    #   - key: UPLOAD_DIR
+    #     value: /var/data/uploads
