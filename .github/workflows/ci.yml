@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# CI runs on a clean runner with NO .env and NO real secrets.
+# A dummy DEEPSEEK_API_KEY lets model construction succeed at import time
+# (init_chat_model only reads the key, it does not call the API). No test, and
+# the eval without --judge, ever calls the real LLM, so CI costs $0 in API fees.
+env:
+  DEEPSEEK_API_KEY: ci-dummy-key-not-real
+  DEEPSEEK_BASE_URL: https://api.deepseek.com
+  HF_HOME: ${{ github.workspace }}/.hf-cache
+
+jobs:
+  test:
+    name: pytest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Cache HuggingFace models
+        uses: actions/cache@v4
+        with:
+          path: .hf-cache
+          key: hf-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run unit tests
+        run: python -m pytest tests/ -q
+
+  eval:
+    name: retrieval eval (hybrid)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Cache HuggingFace models
+        uses: actions/cache@v4
+        with:
+          path: .hf-cache
+          key: hf-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Retrieval metrics only (Recall@k / MRR / Precision@k), matches the
+      # production RETRIEVER_MODE=hybrid. No --judge => no LLM calls => $0.
+      - name: Run retrieval evaluation
+        run: python -m eval.run_eval --retriever hybrid --top-k 3
