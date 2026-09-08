@@ -7,8 +7,11 @@
 """
 import os
 from pathlib import Path
+from typing import List
+
 from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
+from langchain_core.embeddings import Embeddings
 
 from core.logger import logger
 
@@ -54,11 +57,50 @@ def init_llm_model():
     return model
 
 
+class ONNXMiniLMEmbeddings(Embeddings):
+    """
+    langchain Embeddings 适配器，包装 chromadb 自带的 ONNX 版 all-MiniLM-L6-v2。
+    与 torch 版是同一个模型（384 维、mean pooling、L2 归一化），但用 onnxruntime 推理：
+    启动不 import torch/transformers，内存占用大幅下降，让免费档 512MB 实例也装得下。
+    模型首次调用时自动下载到 ~/.cache/chroma/onnx_models（部署时在镜像内预烘焙）。
+    注意：ONNX 与 torch 的向量数值略有差异，切换 backend 必须重建向量库索引。
+    """
+
+    def __init__(self) -> None:
+        from chromadb.utils.embedding_functions import ONNXMiniLM_L6_V2
+        self._ef = ONNXMiniLM_L6_V2()
+        # 预热：触发模型下载（若未缓存）并把权重载入 onnxruntime 会话，让首条查询无需冷加载。
+        # chromadb 用 httpx 默认 5s 超时下载，跨境到美国 S3 的慢网络会握手超时；这里临时把
+        # 超时放宽到 120s，仅包裹预热调用、结束即还原，绝不影响其它 httpx 用途（如 LLM API）。
+        import httpx
+        original_stream = httpx.stream
+
+        def _patient_stream(*args, **kwargs):
+            kwargs.setdefault("timeout", 120.0)
+            return original_stream(*args, **kwargs)
+
+        httpx.stream = _patient_stream
+        try:
+            self._ef(["warmup"])
+        finally:
+            httpx.stream = original_stream
+
+    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+        return [vec.tolist() for vec in self._ef(list(texts))]
+
+    def embed_query(self, text: str) -> List[float]:
+        return self._ef([text])[0].tolist()
+
+
 def init_embeddings():
     """
-    初始化Embedding向量模型
-    默认使用真实HuggingFace语义向量（首次启动会自动下载模型）
-    测试/快速启动可设置 USE_FAKE_EMBEDDING=true 使用随机向量（无语义能力，仅供联调）
+    初始化Embedding向量模型，按 EMBEDDING_BACKEND 选择推理后端：
+    - USE_FAKE_EMBEDDING=true：随机向量（无语义，仅测试联调），优先级最高
+    - onnx（默认）：chromadb 自带 ONNX 版 all-MiniLM-L6-v2，onnxruntime 推理，
+      启动不加载 torch，内存低（Render 免费档 512MB 可容纳）
+    - torch：sentence-transformers 版 HuggingFaceEmbeddings，功能等价但启动即加载
+      torch，内存高；仅本地对比/调试用
+    切换 backend 会改变向量数值，必须重建向量库索引，否则检索错乱。
     """
     if os.getenv("USE_FAKE_EMBEDDING", "false").lower() == "true":
         try:
@@ -69,8 +111,26 @@ def init_embeddings():
         except Exception:
             return None
 
-    # 真实HuggingFace embeddings：模型已缓存时强制离线加载（避免弱网下联网探测可选配置文件拖死启动）
-    # 注意：离线开关必须在 import 前设置，否则被库固化后不生效（此前先 import 后设环境变量的写法无效）
+    backend = os.getenv("EMBEDDING_BACKEND", "onnx").strip().lower()
+    if backend == "torch":
+        return _init_torch_embeddings()
+    if backend != "onnx":
+        logger.warning(f"Unknown EMBEDDING_BACKEND={backend!r}, falling back to onnx")
+
+    try:
+        # 构造即预热（下载/载入模型），失败会抛异常并回退到 torch，绝不中断启动
+        embeddings = ONNXMiniLMEmbeddings()
+        logger.info("RAG: Using ONNX embeddings (all-MiniLM-L6-v2 via onnxruntime)")
+        return embeddings
+    except Exception as e:
+        logger.warning(f"ONNX embeddings failed ({e}), falling back to torch HuggingFaceEmbeddings")
+        return _init_torch_embeddings()
+
+
+def _init_torch_embeddings():
+    """torch 版 HuggingFaceEmbeddings（sentence-transformers）；启动即加载 torch，内存较高。"""
+    # 模型已缓存时强制离线加载（避免弱网下联网探测可选配置文件拖死启动）
+    # 注意：离线开关必须在 import 前设置，否则被库固化后不生效
     if _hf_model_cached(EMBEDDING_MODEL_ID):
         _enable_hf_offline()
 

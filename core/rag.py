@@ -8,12 +8,25 @@ RAG (Retrieval-Augmented Generation) 检索增强生成模块
 """
 import os
 import re
+import sys
+import types
 from pathlib import Path
 from typing import List, Optional
 
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+# ---- 阻断 langchain_text_splitters 的无用重依赖（阶段 4：省启动内存）----
+# 该包 __init__ 会急切 import 其 sentence_transformers 子模块，后者在模块级
+# `from sentence_transformers import SentenceTransformer`，连带把 torch + transformers
+# （数百 MB）拖进内存。但我们只用纯字符切分的 RecursiveCharacterTextSplitter，压根不需要
+# 那个语义切片器。故在导入前给该子模块塞一个占位 stub，让 __init__ 的
+# `from .sentence_transformers import SentenceTransformersTokenTextSplitter` 拿到占位即可，
+# boot 期就彻底不载入 torch。真正的 sentence_transformers 包不受影响（rerank 模式仍能懒加载）。
+if "langchain_text_splitters.sentence_transformers" not in sys.modules:
+    _st_stub = types.ModuleType("langchain_text_splitters.sentence_transformers")
+    _st_stub.SentenceTransformersTokenTextSplitter = None  # 占位；本项目从不使用该类
+    sys.modules["langchain_text_splitters.sentence_transformers"] = _st_stub
+
+from langchain_text_splitters import RecursiveCharacterTextSplitter  # noqa: E402
 from langchain_chroma import Chroma
-from langchain_community.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader
 from langchain_core.documents import Document
 
 from core.model import init_embeddings, init_reranker
@@ -106,6 +119,11 @@ class RAGEngine:
 
     def _load_document(self, file_path: str) -> List[Document]:
         """根据文件类型加载文档"""
+        # 懒加载文档加载器：langchain_community.document_loaders 在 import 时会连锁拉起
+        # sentence_transformers/torch/transformers（数百 MB），挪到真正上传解析时才 import，
+        # 避免部署启动期无谓占内存（阶段 4：让免费档 512MB 实例装得下 RAG 栈）。
+        from langchain_community.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader
+
         ext = Path(file_path).suffix.lower()
         loaders = {
             ".pdf": PyPDFLoader,

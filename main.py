@@ -327,13 +327,18 @@ async def health():
 
 
 # ====================== 启动钩子（阶段 4 部署）======================
+async def _index_corpus_background():
+    from crawler.ingest import ingest
+    n = await asyncio.to_thread(ingest)
+    logger.info(f"Startup: indexed {n} corpus chunks into empty vector store")
+
+
 @app.on_event("startup")
 async def index_corpus_if_empty():
-    """全新持久卷（空向量库）时自动索引镜像内语料，保证首启即可检索；已有数据则跳过"""
+    """空向量库时在后台索引镜像内语料（不阻塞健康检查，削平冷启动内存/时间峰值）"""
     if rag_engine.get_document_count() == 0:
-        from crawler.ingest import ingest
-        n = await asyncio.to_thread(ingest)
-        logger.info(f"Startup: indexed {n} corpus chunks into empty vector store")
+        asyncio.create_task(_index_corpus_background())
+        logger.info("Startup: empty vector store, indexing corpus in background")
     else:
         logger.info(f"Startup: vector store has {rag_engine.get_document_count()} chunks, skip indexing")
 
