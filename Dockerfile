@@ -27,6 +27,11 @@ COPY . .
 # Create data directories
 RUN mkdir -p data/vectordb data/uploads logs
 
+# Pre-build the vector store index INTO the image (the build machine has ample
+# RAM). At runtime the startup hook sees a non-empty store and skips indexing, so
+# the 512MB free tier never pays the corpus-embedding memory spike that OOMed it.
+RUN python -c "from crawler.ingest import ingest; print('build-time indexed', ingest(), 'chunks')"
+
 # Expose port
 EXPOSE 8000
 

@@ -159,13 +159,16 @@ class RAGEngine:
         logger.info(f"Document {filename} indexed successfully")
         return len(chunks)
 
-    def add_documents(self, docs: List[Document]) -> int:
+    def add_documents(self, docs: List[Document], batch_size: int = 32) -> int:
         """
         批量添加已加载的文档（携带自定义元数据），切片后入向量库。
         供语料管道使用：切片时每个 chunk 自动继承文档级元数据（如 source_url/crawl_date）。
+        分批嵌入+写入：一次性 embed 整个语料会让 ONNX 推理内存瞬时飙升，撑爆 Render
+        免费档 512MB；小批次把峰值压平（构建期烘焙索引与运行时上传文档都受益）。
         """
         chunks = self.text_splitter.split_documents(docs)
-        self.vector_store.add_documents(chunks)
+        for i in range(0, len(chunks), batch_size):
+            self.vector_store.add_documents(chunks[i:i + batch_size])
         sources = {d.metadata.get("source", "?") for d in docs}
         logger.info(f"Indexed {len(chunks)} chunks from {len(docs)} documents: {sorted(sources)}")
         return len(chunks)
