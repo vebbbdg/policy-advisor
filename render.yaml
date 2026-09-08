@@ -16,6 +16,10 @@ services:
       # Set this manually in the Render dashboard as a secret (your real key).
       - key: DEEPSEEK_API_KEY
         sync: false
+      # Public DeepSeek endpoint (not a secret). init_llm_model() also defaults
+      # to this in code, so boot survives even if the blueprint isn't re-synced.
+      - key: DEEPSEEK_BASE_URL
+        value: https://api.deepseek.com
       # Render generates a strong random JWT signing secret.
       - key: JWT_SECRET
         generateValue: true

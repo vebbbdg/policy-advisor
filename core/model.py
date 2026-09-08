@@ -42,7 +42,10 @@ RERANKER_MODEL_ID = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 def init_llm_model():
     """初始化LLM对话模型（流式输出；开启 stream_usage 以返回 token 用量供成本追踪）"""
     api_key = os.getenv("DEEPSEEK_API_KEY")
-    base_url = os.getenv("DEEPSEEK_BASE_URL")
+    # Default to DeepSeek's public endpoint so boot never crashes when the env
+    # var is absent (e.g. a Render deploy that omits DEEPSEEK_BASE_URL). Local
+    # .env and CI both set it explicitly, so their behavior is unchanged.
+    base_url = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
 
     model = init_chat_model(
         model="deepseek-chat",
