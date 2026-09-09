@@ -90,6 +90,12 @@ async def index():
     return FileResponse("static/index.html")
 
 
+@app.get("/privacy")
+async def privacy():
+    """隐私政策页（阶段 5 合规）"""
+    return FileResponse("static/privacy.html")
+
+
 # ====================== 认证 API（阶段 3.2，公开端点，无需 token）======================
 @app.post("/api/auth/guest")
 async def auth_guest():
@@ -304,6 +310,25 @@ async def document_stats():
         "total_chunks": rag_engine.get_document_count(),
         "enabled": RAG_ENABLED
     }
+
+
+# 语料清单（爬虫写入，随镜像预建索引进容器），页脚用它展示「资料最后更新日期」
+CORPUS_MANIFEST = Path("data/policy_corpus/manifest.json")
+
+
+@app.get("/api/meta")
+async def corpus_meta():
+    """语料元信息（阶段 5 合规）：整批抓取日期 + 来源数，供页脚/隐私页展示时效性。
+    清单缺失或损坏时降级返回 null 字段，绝不影响页面加载。"""
+    try:
+        manifest = json.loads(CORPUS_MANIFEST.read_text(encoding="utf-8"))
+        return {
+            "corpus_updated_at": manifest.get("crawl_date"),
+            "source_count": len(manifest.get("sources", [])),
+        }
+    except Exception as e:
+        logger.warning(f"corpus manifest unavailable: {e}")
+        return {"corpus_updated_at": None, "source_count": None}
 
 
 @app.delete("/api/documents")

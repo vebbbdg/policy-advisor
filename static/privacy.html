@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>隐私政策 - 留学生政策助手</title>
+    <style>
+        :root {
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --accent: #2563eb;
+            --border: #e5e5e5;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f7f7f8;
+            color: var(--text-primary);
+            line-height: 1.8;
+        }
+        .page {
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 48px 24px 80px;
+        }
+        h1 {
+            font-size: 30px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .updated {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+        }
+        h2 {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 32px 0 8px;
+        }
+        p, li { font-size: 15px; }
+        ul { padding-left: 22px; margin: 8px 0; }
+        li { margin-bottom: 6px; }
+        a { color: var(--accent); }
+        .card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px 28px;
+        }
+        .back {
+            display: inline-block;
+            margin-bottom: 24px;
+            font-size: 14px;
+            text-decoration: none;
+        }
+        .back:hover { text-decoration: underline; }
+        .highlight {
+            background: #fef9c3;
+            border: 1px solid #fde047;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 14px;
+            margin: 16px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <a class="back" href="/">← 返回助手</a>
+        <h1>隐私政策</h1>
+        <p class="updated">资料最后更新：<span id="corpusDate">加载中…</span> · 本政策生效日期：2026-09-09</p>
+
+        <div class="card">
+            <h2>这是什么服务</h2>
+            <p>留学生政策助手是一个个人作品集项目（demo），基于 RAG 技术回答美国 F-1 学生 OPT / CPT / STEM OPT 相关政策问题。所有答案引用自 USCIS、DHS Study in the States 等官方公开页面。</p>
+
+            <h2>我们收集什么</h2>
+            <ul>
+                <li><strong>访客使用</strong>：无需任何个人信息，系统自动签发匿名访客令牌，可发送 5 条消息。</li>
+                <li><strong>登录</strong>：仅需一个邮箱地址（当前为占位登录，无密码、无验证），用于保存你的会话记录。</li>
+                <li><strong>对话内容</strong>：你发送的消息与 AI 回复会存储在服务器数据库中，用于会话历史展示。</li>
+                <li><strong>上传的文档</strong>：你上传的文件会被存储并切分索引，用于问答检索。</li>
+            </ul>
+
+            <h2>我们如何使用这些数据</h2>
+            <ul>
+                <li>仅用于提供本服务本身（展示历史会话、基于上传文档作答）。</li>
+                <li><strong>不出售</strong>任何数据，<strong>不接入</strong>广告或第三方分析追踪。</li>
+                <li>你的提问会发送给 DeepSeek API 以生成回答（这是 LLM 服务的工作原理）。</li>
+                <li>页面通过 CDN 加载 marked.js / highlight.js 前端库，CDN 会看到你的 IP（标准网页加载行为）。</li>
+            </ul>
+
+            <h2>数据保留</h2>
+            <div class="highlight">
+                ⚠️ 重要：本服务运行在免费托管档上，<strong>没有持久磁盘</strong>。每次重新部署后，会话记录、账号和上传的文档<strong>都会被清空重置</strong>。请不要在本服务中存放任何重要或敏感信息。
+            </div>
+
+            <h2>免责声明</h2>
+            <p>本服务由 AI 生成回答，仅供参考与学习，<strong>不构成法律建议</strong>，也不能替代学校国际学生办公室（DSO）或移民律师的专业意见。移民政策可能随时变化，请以官方来源页面的最新版本为准。</p>
+
+            <h2>联系</h2>
+            <p>本项目源码公开于 <a href="https://github.com/vebbbdg/policy-advisor" target="_blank" rel="noopener">GitHub</a>，欢迎通过 Issue 反馈问题。</p>
+        </div>
+    </div>
+
+    <script>
+        // 页头展示语料抓取日期（与首页页脚同一数据源 /api/meta）
+        fetch('/api/meta')
+            .then(r => r.json())
+            .then(d => {
+                if (d.corpus_updated_at) {
+                    document.getElementById('corpusDate').textContent = d.corpus_updated_at.slice(0, 10);
+                } else {
+                    document.getElementById('corpusDate').textContent = '未知';
+                }
+            })
+            .catch(() => { document.getElementById('corpusDate').textContent = '未知'; });
+    </script>
+</body>
+</html>

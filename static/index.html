@@ -422,6 +422,17 @@
             margin-top: 8px;
         }
 
+        /* ===== Site footer（阶段 5 合规：常驻免责 + 资料日期 + 隐私政策）===== */
+        .site-footer {
+            flex-shrink: 0;
+            padding: 6px 16px 10px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        .site-footer a { color: var(--text-secondary); text-decoration: underline; }
+        .site-footer a:hover { color: var(--accent); }
+
         /* Mobile */
         .menu-btn { display: none; }
         @media (max-width: 768px) {
@@ -572,6 +583,11 @@
                 <div class="input-hint">Press Enter to send, Shift+Enter for new line</div>
             </div>
         </div>
+
+        <!-- 阶段 5 合规页脚：常驻 flex 流内，不会遮挡输入框 -->
+        <footer class="site-footer">
+            AI 生成内容仅供参考，不构成法律建议 · 资料更新于 <span id="corpusDate">…</span> · <a href="/privacy" target="_blank" rel="noopener">隐私政策</a>
+        </footer>
     </main>
 
     <!-- Login modal (phase 3.2): shown when a guest hits the 5-message limit -->
@@ -677,7 +693,19 @@
             await ensureToken();
             loadSessions();
             updateRAGStatus();
+            loadCorpusMeta();
         })();
+
+        // 阶段 5：页脚展示语料最后更新日期（来源 /api/meta，失败静默不影响页面）
+        async function loadCorpusMeta() {
+            try {
+                const res = await fetch('/api/meta');
+                const data = await res.json();
+                if (data.corpus_updated_at) {
+                    document.getElementById('corpusDate').textContent = data.corpus_updated_at.slice(0, 10);
+                }
+            } catch(e) {}
+        }
 
         // ===== Session Management =====
         async function loadSessions() {
