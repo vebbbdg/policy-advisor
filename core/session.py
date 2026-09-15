@@ -7,6 +7,7 @@
 """
 import threading
 import uuid
+from datetime import date
 from typing import Dict, List
 
 from sqlmodel import Session, col, select
@@ -165,6 +166,30 @@ class SessionManager:
             rows = db.exec(
                 select(MessageRecord.id).where(
                     MessageRecord.role == "user",
+                    col(MessageRecord.session_id).in_(session_ids),
+                )
+            ).all()
+            return len(rows)
+
+    def count_user_messages_today(self, user_id: str) -> int:
+        """
+        统计某用户“今天”发出的 user 消息数，跨其所有会话累计。
+        供注册用户每日配额判断：发满 REGISTERED_DAILY_LIMIT 条即拦截，明天自动恢复。
+        “今天”= 服务器本地时区自然日；created_at 是 ISO 字符串，
+        与 date.today().isoformat() 做字典序比较即可切出当天
+        （同日字符串更长故大于边界，旧库哨兵值 '0000-...' 永远小于边界）。
+        """
+        boundary = date.today().isoformat()
+        with Session(self.engine) as db:
+            session_ids = db.exec(
+                select(SessionRecord.id).where(SessionRecord.user_id == user_id)
+            ).all()
+            if not session_ids:
+                return 0
+            rows = db.exec(
+                select(MessageRecord.id).where(
+                    MessageRecord.role == "user",
+                    MessageRecord.created_at >= boundary,
                     col(MessageRecord.session_id).in_(session_ids),
                 )
             ).all()

@@ -860,11 +860,16 @@
                     body: JSON.stringify({ message: text, session_id: currentSessionId, use_rag: useRAG })
                 });
 
-                // 阶段 3.2：访客额度用尽 -> 403 -> 弹登录框（此时 body 是 JSON 错误，不能读流）
+                // 配额用尽 -> 403（此时 body 是 JSON 错误，不能读流）：
+                // 访客 -> 引导登录；注册用户 -> 提示明日恢复（不弹登录框）
                 if (res.status === 403) {
                     contentEl.classList.remove('typing-cursor');
-                    contentEl.innerHTML = '<span style="color:#6e6e80">访客额度已用完（5 条消息），请登录后继续 👉</span>';
-                    showLoginModal();
+                    if (localStorage.getItem(GUEST_KEY) === 'true') {
+                        contentEl.innerHTML = '<span style="color:#6e6e80">访客额度已用完（5 条消息），请登录后继续 👉</span>';
+                        showLoginModal();
+                    } else {
+                        contentEl.innerHTML = '<span style="color:#6e6e80">今日免费额度已用完（5 条），明天再来 👋</span>';
+                    }
                     return;
                 }
                 if (!res.ok) {

@@ -123,6 +123,61 @@ class TestSessionManager:
         # 另一个用户没有消息
         assert self.sm.count_user_messages("guest-2") == 0
 
+    def test_count_user_messages_today(self):
+        """注册用户每日配额：只数今天的 user 消息，历史消息不计入"""
+        from sqlmodel import Session as DbSession
+        from core.db import MessageRecord
+
+        sid = self.sm.create_session(user_id="alice")
+        self.sm.add_message(sid, "user", "today-1")
+        self.sm.add_message(sid, "assistant", "a")   # 非 user，不计
+        self.sm.add_message(sid, "user", "today-2")
+        assert self.sm.count_user_messages_today("alice") == 2
+
+        # 手工插入一条“历史”消息（哨兵时间戳）：不计入今天，但计入终身口径
+        with DbSession(self.sm.engine) as db:
+            db.add(MessageRecord(
+                session_id=sid, role="user", content="old",
+                created_at="0000-01-01T00:00:00",
+            ))
+            db.commit()
+        assert self.sm.count_user_messages_today("alice") == 2
+        assert self.sm.count_user_messages("alice") == 3
+        # 另一个用户不受影响
+        assert self.sm.count_user_messages_today("bob") == 0
+
+    def test_legacy_db_migration_adds_created_at(self, tmp_path):
+        """迷你迁移：旧库 chat_message 缺 created_at 列时自动补列，服务仍可用"""
+        import sqlalchemy as sa
+        from core.db import make_engine
+
+        db_url = f"sqlite:///{tmp_path / 'legacy.db'}"
+        # 造一个“旧 schema”：手工建表，故意没有 created_at 列
+        raw = sa.create_engine(db_url)
+        with raw.begin() as conn:
+            conn.execute(sa.text(
+                "CREATE TABLE chat_session (id VARCHAR PRIMARY KEY, title VARCHAR, "
+                "created_at VARCHAR, seq INTEGER, user_id VARCHAR)"
+            ))
+            conn.execute(sa.text(
+                "CREATE TABLE chat_message (id INTEGER PRIMARY KEY, session_id VARCHAR, "
+                "role VARCHAR, content VARCHAR)"
+            ))
+        raw.dispose()
+
+        engine = make_engine(db_url)
+        with engine.connect() as conn:
+            cols = [row[1] for row in conn.exec_driver_sql("PRAGMA table_info(chat_message)")]
+        assert "created_at" in cols, "迁移应补上 created_at 列"
+        engine.dispose()
+
+        # 迁移后读写正常，且新消息计入今天
+        sm = SessionManager(db_url)
+        sid = sm.create_session(user_id="alice")
+        sm.add_message(sid, "user", "hi")
+        assert sm.count_user_messages_today("alice") == 1
+        sm.engine.dispose()
+
 
 if __name__ == "__main__":
     import pytest

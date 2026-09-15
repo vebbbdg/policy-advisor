@@ -31,6 +31,10 @@ def client(monkeypatch):
 
     monkeypatch.setattr(main, "model", _FakeModel())
 
+    # 抬高注册用户每日配额：本测试要连发 limit+1 次（现默认 100），
+    # 不抬高的话第 6 次就会先撞每日配额(403)而非限流(429)
+    monkeypatch.setattr(main, "REGISTERED_DAILY_LIMIT", 10_000)
+
     # 清空限流计数，避免重复运行/其他测试相互干扰（内存存储支持 reset）
     try:
         main.app.state.limiter.reset()
@@ -52,7 +56,7 @@ def test_chat_stream_rate_limit(client, auth_headers):
     """连发 limit+1 次（带非访客 token）：前 limit 次放行(200)，第 limit+1 次被限流(429)"""
     import main
 
-    # 从配置解析限额，避免把 20 写死（默认 CHAT_RATE_LIMIT="20/hour"）
+    # 从配置解析限额，避免把数字写死（默认 CHAT_RATE_LIMIT="100/hour"）
     limit = int(main.CHAT_RATE_LIMIT.split("/")[0])
     payload = {"message": "hi", "use_rag": False}
 

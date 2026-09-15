@@ -31,7 +31,7 @@ Three problems a generic RAG chatbot cannot solve for immigration policy:
 
 - **Streaming Responses (SSE)** — Token-by-token output, ChatGPT-like typing effect
 - **Multi-Session Support** — Isolated conversation threads with auto-generated titles, persisted in SQLite
-- **Auth & Guest Funnel** — JWT-based auth; anonymous guests get 5 free messages, then a one-tap email login
+- **Auth & Guest Funnel** — JWT-based auth; anonymous guests get 5 free messages (lifetime), registered users get 5 messages/day (resets daily); one-tap email login
 - **Rate Limiting & Cost Observability** — per-IP limit on the LLM endpoint (slowapi); daily token-usage tracking with budget alerts
 - **Document Upload** — PDF / TXT / DOCX with extension whitelist, size cap, and path-traversal-safe renaming
 - **Three-arm Retrieval** — dense vector, BM25+RRF hybrid, and hybrid + cross-encoder rerank; A/B measurable via the evaluation suite

@@ -50,10 +50,13 @@ class MessageRecord(SQLModel, table=True):
     # 自增整数主键：天然保证消息按插入顺序排列
     # （get_messages 按 id 升序取出即为时间序，system 提示词永远在最前）
     id: Optional[int] = Field(default=None, primary_key=True)
-    # 外键指向所属会话；建索引加速"查某个会话的所有消息"
+    # 外键指向所属会话；建索引加速“查某个会话的所有消息”
     session_id: str = Field(foreign_key="chat_session.id", index=True)
     role: str
     content: str
+    # 消息创建时间（ISO 字符串）：注册用户“每日配额”按天计数的依据。
+    # 旧库缺此列时由 make_engine 的迷你迁移补列（旧行填哨兵值，永远不算“今天”）。
+    created_at: str = Field(default_factory=lambda: datetime.now().isoformat(), index=True)
 
 
 def _ensure_sqlite_dir(db_url: str) -> None:
@@ -61,6 +64,23 @@ def _ensure_sqlite_dir(db_url: str) -> None:
     if db_url.startswith("sqlite:///") and ":memory:" not in db_url:
         db_path = Path(db_url.replace("sqlite:///", "", 1))
         db_path.parent.mkdir(parents=True, exist_ok=True)
+
+
+def _migrate_message_created_at(engine) -> None:
+    """
+    迷你迁移：旧库的 chat_message 没有 created_at 列时补列（幂等）。
+    旧行统一填哨兵值 '0000-01-01T00:00:00'（ISO 字典序最小），
+    保证历史消息永远不被计入“今天”，语义等同于“昨天的消息”。
+    生产库每次部署重建（免费档无持久盘），此迁移主要保护本地开发库。
+    """
+    with engine.connect() as conn:
+        cols = [row[1] for row in conn.exec_driver_sql("PRAGMA table_info(chat_message)")]
+        if cols and "created_at" not in cols:
+            conn.exec_driver_sql(
+                "ALTER TABLE chat_message ADD COLUMN created_at VARCHAR "
+                "NOT NULL DEFAULT '0000-01-01T00:00:00'"
+            )
+            conn.commit()
 
 
 def make_engine(db_url: str = DEFAULT_DB_URL):
@@ -83,4 +103,5 @@ def make_engine(db_url: str = DEFAULT_DB_URL):
 
     engine = create_engine(db_url, echo=False, connect_args=connect_args, **kwargs)
     SQLModel.metadata.create_all(engine)
+    _migrate_message_created_at(engine)
     return engine
